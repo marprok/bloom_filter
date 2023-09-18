@@ -1,0 +1,17 @@
+﻿---
+BasedOnStyle: WebKit
+AlignAfterOpenBracket: Align
+AlignTrailingComments: 'true'
+AlignConsecutiveAssignments: 'true'
+AlignConsecutiveDeclarations: 'true'
+BinPackArguments: 'false'
+BinPackParameters: 'false'
+BreakBeforeBraces: Allman
+BreakConstructorInitializers: BeforeComma
+IncludeBlocks: Merge
+IndentPPDirectives: AfterHash
+Language: Cpp
+MaxEmptyLinesToKeep: '1'
+PointerAlignment: Left
+
+...
