@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(CTest)
 
-add_compile_options(-Wall -Wextra -Werror -pedantic -fno-omit-frame-pointer -fsanitize=bounds)
+add_compile_options(-Wall -Wextra -Werror -pedantic -fno-omit-frame-pointer -fsanitize=bounds -Werror=implicit-fallthrough=0)
 add_link_options(-fsanitize=bounds)
 add_executable(${PROJECT_NAME})
 
