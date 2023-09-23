@@ -1,11 +1,12 @@
 #ifndef BLOOM_FILTER_HPP
 #define BLOOM_FILTER_HPP
 
+#include <cmath>
 #include <cstdint>
+#include <vector>
 
 namespace BF
 {
-
 void MurmurHash3_x64_128_marios(const void* key, const int len, const uint32_t seed, void* out)
 {
 
@@ -138,17 +139,68 @@ void MurmurHash3_x64_128_marios(const void* key, const int len, const uint32_t s
     ((uint64_t*)out)[1] = h2;
 }
 
-template <std::size_t bit_count, std::uint8_t hash_count>
 class bloom_filter
 {
 public:
-    constexpr std::size_t bit_cnt() const { return bit_count; }
-    constexpr std::size_t hash_cnt() const { return hash_count; }
+    bloom_filter(std::size_t m, // size in bits
+                 std::size_t k, // number of hashes
+                 std::size_t n) // expected number of elements
+        : m(m)
+        , k(k)
+        , n(n)
+        , p(0.0)
+    {
+        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        m_bits.resize(byte_count > 0 ? byte_count : 1, 0);
+        if (n > 0)
+            p = std::pow(1 - std::exp(-static_cast<double>(k) / (static_cast<double>(m) / n)), k);
+    }
+
+    // no copying allowed, only one entity should be the owner of a bloom_filter
+    bloom_filter(const bloom_filter& other) = delete;
+    bloom_filter& operator=(const bloom_filter& other) = delete;
+
+    bloom_filter(bloom_filter&& other)
+        : m(other.m)
+        , k(other.k)
+        , n(other.n)
+        , p(other.p)
+    {
+        if (other.size() > 0)
+            m_bits = std::move(other.m_bits);
+        other.m = other.k = other.n = other.p = 0;
+    }
+
+    bloom_filter& operator=(bloom_filter&& other)
+    {
+        if (this != &other)
+        {
+            m = other.m;
+            k = other.k;
+            n = other.n;
+            p = other.p;
+
+            if (other.size() > 0)
+                m_bits = std::move(other.m_bits);
+            other.m = other.k = other.n = other.p = 0;
+        }
+        return *this;
+    }
+
+    std::size_t bit_count() const { return m; }
+    std::size_t hash_count() const { return k; }
+    std::size_t expected_elements() const { return n; }
+    std::size_t size() const { return m_bits.size(); }
+
+    double              false_positive() const { return p; }
+    const std::uint8_t* raw() const { return m_bits.data(); }
 
 private:
-    static constexpr std::size_t byte_count = bit_count / 8 + static_cast<bool>(bit_count & 7);
-
-    std::uint8_t m_bits[byte_count > 0 ? byte_count : 1] = {};
+    std::size_t m;
+    std::size_t k;
+    std::size_t n;
+    double      p;
+    std::vector<std::uint8_t> m_bits;
 };
 } // BF
 #endif // BLOOM_FILTER_HPP
