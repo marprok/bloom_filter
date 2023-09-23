@@ -201,7 +201,12 @@ public:
     std::size_t size() const { return m_bits.size(); }
 
     double              false_positive() const { return p; }
-    const std::uint8_t* raw() const { return m_bits.data(); }
+    const std::uint8_t* raw() const
+    {
+        if (m_bits.empty())
+            return nullptr;
+        return m_bits.data();
+    }
 
 private:
     std::size_t m; // size in bits
