@@ -142,18 +142,26 @@ void MurmurHash3_x64_128_marios(const void* key, const int len, const uint32_t s
 class bloom_filter
 {
 public:
-    bloom_filter(std::size_t m, // size in bits
-                 std::size_t k, // number of hashes
-                 std::size_t n) // expected number of elements
+    // None of the constructors take care of div by zero. They will just crash.
+    bloom_filter(std::size_t m, std::size_t k, std::size_t n)
         : m(m)
         , k(k)
         , n(n)
-        , p(0.0)
     {
         const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
         m_bits.resize(byte_count > 0 ? byte_count : 1, 0);
-        if (n > 0)
-            p = std::pow(1 - std::exp(-static_cast<double>(k) / (static_cast<double>(m) / n)), k);
+        p = std::pow(1 - std::exp(-static_cast<double>(k) / (static_cast<double>(m) / n)), k);
+    }
+
+    bloom_filter(std::size_t n, double p)
+        : n(n)
+        , p(p)
+    {
+        m = std::ceil((n * std::log(p)) / log(1.0 / std::pow(2, std::log(2))));
+        k = std::round((static_cast<double>(m) / n) * std::log(2));
+
+        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        m_bits.resize(byte_count > 0 ? byte_count : 1, 0);
     }
 
     // no copying allowed, only one entity should be the owner of a bloom_filter
@@ -196,10 +204,11 @@ public:
     const std::uint8_t* raw() const { return m_bits.data(); }
 
 private:
-    std::size_t m;
-    std::size_t k;
-    std::size_t n;
-    double      p;
+    std::size_t m; // size in bits
+    std::size_t k; // number of hashes
+    std::size_t n; // expected number of elements
+    double      p; // false positive probability(>= 0 && <= 1)
+
     std::vector<std::uint8_t> m_bits;
 };
 } // BF
