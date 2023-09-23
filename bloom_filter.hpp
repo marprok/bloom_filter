@@ -199,8 +199,8 @@ public:
     std::size_t hash_count() const { return k; }
     std::size_t expected_elements() const { return n; }
     std::size_t size() const { return m_bits.size(); }
+    double      false_positive() const { return p; }
 
-    double              false_positive() const { return p; }
     const std::uint8_t* raw() const
     {
         if (m_bits.empty())
