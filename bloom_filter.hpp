@@ -1,6 +1,7 @@
 #ifndef BLOOM_FILTER_HPP
 #define BLOOM_FILTER_HPP
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -143,13 +144,21 @@ class bloom_filter
 {
 public:
     // None of the constructors take care of div by zero. They will just crash.
+    bloom_filter()
+        : m(0)
+        , k(0)
+        , n(0)
+        , p(0.0)
+    {
+    }
+
     bloom_filter(std::size_t m, std::size_t k, std::size_t n)
         : m(m)
         , k(k)
         , n(n)
     {
         const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
-        m_bits.resize(byte_count > 0 ? byte_count : 1, 0);
+        bits.resize(byte_count > 0 ? byte_count : 1, 0);
         p = std::pow(1 - std::exp(-static_cast<double>(k) / (static_cast<double>(m) / n)), k);
     }
 
@@ -161,12 +170,12 @@ public:
         k = std::round((static_cast<double>(m) / n) * std::log(2));
 
         const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
-        m_bits.resize(byte_count > 0 ? byte_count : 1, 0);
+        bits.resize(byte_count > 0 ? byte_count : 1, 0);
     }
 
-    // no copying allowed, only one entity should be the owner of a bloom_filter
-    bloom_filter(const bloom_filter& other) = delete;
-    bloom_filter& operator=(const bloom_filter& other) = delete;
+    bloom_filter(const bloom_filter& other) = default;
+
+    bloom_filter& operator=(const bloom_filter& other) = default;
 
     bloom_filter(bloom_filter&& other)
         : m(other.m)
@@ -175,7 +184,7 @@ public:
         , p(other.p)
     {
         if (other.size() > 0)
-            m_bits = std::move(other.m_bits);
+            bits = std::move(other.bits);
         other.m = other.k = other.n = other.p = 0;
     }
 
@@ -189,23 +198,46 @@ public:
             p = other.p;
 
             if (other.size() > 0)
-                m_bits = std::move(other.m_bits);
+                bits = std::move(other.bits);
             other.m = other.k = other.n = other.p = 0;
         }
         return *this;
     }
 
+    // Does not check for the values of p and the size of the buffer
+    // correspond to the m, k, n parameters. TODO: fix this
+    bool from(std::size_t         m,
+              std::size_t         k,
+              std::size_t         n,
+              double              p,
+              const std::uint8_t* raw,
+              std::size_t         raw_size)
+    {
+        if (!raw)
+            return false;
+
+        this->m = m;
+        this->k = k;
+        this->n = n;
+        this->p = p;
+
+        bits.reserve(raw_size);
+        std::copy(raw, raw + raw_size, bits.begin());
+
+        return true;
+    }
+
     std::size_t bit_count() const { return m; }
     std::size_t hash_count() const { return k; }
     std::size_t expected_elements() const { return n; }
-    std::size_t size() const { return m_bits.size(); }
+    std::size_t size() const { return bits.size(); }
     double      false_positive() const { return p; }
 
     const std::uint8_t* raw() const
     {
-        if (m_bits.empty())
+        if (bits.empty())
             return nullptr;
-        return m_bits.data();
+        return bits.data();
     }
 
 private:
@@ -214,7 +246,7 @@ private:
     std::size_t n; // expected number of elements
     double      p; // false positive probability(>= 0 && <= 1)
 
-    std::vector<std::uint8_t> m_bits;
+    std::vector<std::uint8_t> bits;
 };
 } // BF
 #endif // BLOOM_FILTER_HPP
