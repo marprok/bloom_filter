@@ -6,7 +6,8 @@ namespace BF
 TEST(bf_test, ownership)
 {
     {
-        BF::bloom_filter bf(1024, 2, 3);
+        BF::bloom_filter bf;
+        EXPECT_TRUE(bf.config(1024, 2, 3));
         EXPECT_EQ(bf.bit_count(), 1024);
         EXPECT_EQ(bf.hash_count(), 2);
         EXPECT_EQ(bf.expected_elements(), 3);
@@ -48,27 +49,41 @@ TEST(bf_test, ownership)
 
 TEST(bf_test, parameters)
 {
-    constexpr double EPSILON = 0.000000001;
     {
-        BF::bloom_filter bf(1024, 10, 1024 * 2);
+        BF::bloom_filter bf;
+        EXPECT_TRUE(bf.config(1024, 10, 1024 * 2));
         EXPECT_EQ(bf.bit_count(), 1024);
         EXPECT_EQ(bf.hash_count(), 10);
         EXPECT_EQ(bf.expected_elements(), 1024 * 2);
-        const double delta = std::fabs(bf.false_positive() - 0.999999979);
-        EXPECT_LE(delta, EPSILON);
+        EXPECT_TRUE(is_close_enough(bf.false_positive(), 0.999999979));
         EXPECT_EQ(bf.size(), 128);
         EXPECT_NE(bf.raw(), nullptr);
     }
 
     {
-        BF::bloom_filter bf(553, 0.002);
+        BF::bloom_filter bf;
+        EXPECT_TRUE(bf.config(553, 0.002));
         EXPECT_EQ(bf.bit_count(), 7153);
         EXPECT_EQ(bf.hash_count(), 9);
         EXPECT_EQ(bf.expected_elements(), 553);
-        const double delta = std::fabs(bf.false_positive() - 0.002);
-        EXPECT_LE(delta, EPSILON);
+        EXPECT_TRUE(is_close_enough(bf.false_positive(), 0.002));
         EXPECT_EQ(bf.size(), 895);
         EXPECT_NE(bf.raw(), nullptr);
+    }
+
+    {
+        BF::bloom_filter bf;
+        EXPECT_FALSE(bf.config(0, 0.5));
+        EXPECT_FALSE(bf.config(0, 1.0));
+        EXPECT_FALSE(bf.config(0, 1.5));
+        EXPECT_FALSE(bf.config(256, 0.0));
+        EXPECT_FALSE(bf.config(256, -0.005));
+        EXPECT_FALSE(bf.config(0, 0.0));
+
+        EXPECT_FALSE(bf.config(0, 256, 1024));
+        EXPECT_FALSE(bf.config(256, 0, 1024));
+        EXPECT_FALSE(bf.config(256, 1024, 0));
+        EXPECT_FALSE(bf.config(0, 0, 0));
     }
 }
 } // BF

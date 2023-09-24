@@ -140,6 +140,13 @@ void MurmurHash3_x64_128_marios(const void* key, const int len, const uint32_t s
     ((uint64_t*)out)[1] = h2;
 }
 
+inline bool is_close_enough(double a, double b)
+{
+    constexpr double EPSILON = 0.000000001;
+    const double     delta   = std::fabs(a - b);
+    return delta <= EPSILON;
+}
+
 class bloom_filter
 {
 public:
@@ -150,27 +157,6 @@ public:
         , n(0)
         , p(0.0)
     {
-    }
-
-    bloom_filter(std::size_t m, std::size_t k, std::size_t n)
-        : m(m)
-        , k(k)
-        , n(n)
-    {
-        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
-        bits.resize(byte_count > 0 ? byte_count : 1, 0);
-        p = std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
-    }
-
-    bloom_filter(std::size_t n, double p)
-        : n(n)
-        , p(p)
-    {
-        m = std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
-        k = std::round((static_cast<double>(m) / n) * std::log(2.0));
-
-        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
-        bits.resize(byte_count > 0 ? byte_count : 1, 0);
     }
 
     bloom_filter(const bloom_filter& other) = default;
@@ -202,6 +188,43 @@ public:
             other.m = other.k = other.n = other.p = 0;
         }
         return *this;
+    }
+
+    bool config(std::size_t m, std::size_t k, std::size_t n)
+    {
+        if (m == 0 || k == 0 || n == 0)
+            return false;
+
+        this->m = m;
+        this->k = k;
+        this->n = n;
+
+        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        bits.resize(byte_count > 0 ? byte_count : 1, 0);
+        p = std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
+
+        return true;
+    }
+
+    bool config(std::size_t n, double p)
+    {
+        if (is_close_enough(p, 0.0)
+            || p < 0.0
+            || p > 1.0
+            || is_close_enough(p, 1.0)
+            || n == 0)
+            return false;
+
+        this->n = n;
+        this->p = p;
+
+        m = std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
+        k = std::round((static_cast<double>(m) / n) * std::log(2.0));
+
+        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        bits.resize(byte_count > 0 ? byte_count : 1, 0);
+
+        return true;
     }
 
     // Does not check for the values of p and the size of the buffer
