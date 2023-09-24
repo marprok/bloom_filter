@@ -159,15 +159,15 @@ public:
     {
         const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
-        p = std::pow(1 - std::exp(-static_cast<double>(k) / (static_cast<double>(m) / n)), k);
+        p = std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
     }
 
     bloom_filter(std::size_t n, double p)
         : n(n)
         , p(p)
     {
-        m = std::ceil((n * std::log(p)) / log(1.0 / std::pow(2, std::log(2))));
-        k = std::round((static_cast<double>(m) / n) * std::log(2));
+        m = std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
+        k = std::round((static_cast<double>(m) / n) * std::log(2.0));
 
         const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
@@ -244,7 +244,7 @@ private:
     std::size_t m; // size in bits
     std::size_t k; // number of hashes
     std::size_t n; // expected number of elements
-    double      p; // false positive probability(>= 0 && <= 1)
+    double      p; // false positive probability(>= 0 && <= 1) TODO: maybe long double?
 
     std::vector<std::uint8_t> bits;
 };
