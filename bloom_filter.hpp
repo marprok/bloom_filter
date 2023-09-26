@@ -169,8 +169,8 @@ public:
         , n(other.n)
         , p(other.p)
     {
-        if (other.size() > 0)
-            bits = std::move(other.bits);
+        if (!other.bits.empty())
+            std::swap(bits, other.bits);
         other.m = other.k = other.n = other.p = 0;
     }
 
@@ -183,8 +183,11 @@ public:
             n = other.n;
             p = other.p;
 
-            if (other.size() > 0)
-                bits = std::move(other.bits);
+            if (!other.bits.empty())
+            {
+                std::swap(bits, other.bits);
+                other.bits.clear(); // in case it is not empty
+            }
             other.m = other.k = other.n = other.p = 0;
         }
         return *this;
@@ -210,8 +213,8 @@ public:
     {
         if (is_close_enough(p, 0.0)
             || p < 0.0
-            || p > 1.0
             || is_close_enough(p, 1.0)
+            || p > 1.0
             || n == 0)
             return false;
 
@@ -243,7 +246,6 @@ public:
         this->k = k;
         this->n = n;
         this->p = p;
-
         bits.reserve(raw_size);
         std::copy(raw, raw + raw_size, bits.begin());
 
@@ -253,13 +255,14 @@ public:
     std::size_t bit_count() const { return m; }
     std::size_t hash_count() const { return k; }
     std::size_t expected_elements() const { return n; }
-    std::size_t size() const { return bits.size(); }
+    std::size_t size() const { return bits.size(); } // in bytes
     double      false_positive() const { return p; }
 
     const std::uint8_t* raw() const
     {
         if (bits.empty())
             return nullptr;
+
         return bits.data();
     }
 
