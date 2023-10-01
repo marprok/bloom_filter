@@ -193,7 +193,7 @@ public:
         return *this;
     }
 
-    bool config(std::size_t m, std::size_t k, std::size_t n)
+    bool config(std::uint64_t m, std::uint64_t k, std::uint64_t n)
     {
         if (m == 0 || k == 0 || n == 0)
             return false;
@@ -202,14 +202,14 @@ public:
         this->k = k;
         this->n = n;
 
-        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
         p = std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
 
         return true;
     }
 
-    bool config(std::size_t n, double p)
+    bool config(std::uint64_t n, double p)
     {
         if (is_close_enough(p, 0.0)
             || p < 0.0
@@ -224,7 +224,7 @@ public:
         m = std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
         k = std::round((static_cast<double>(m) / n) * std::log(2.0));
 
-        const std::size_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
 
         return true;
@@ -232,12 +232,12 @@ public:
 
     // Does not check for the values of p and the size of the buffer
     // correspond to the m, k, n parameters. TODO: fix this
-    bool from(std::size_t         m,
-              std::size_t         k,
-              std::size_t         n,
+    bool from(std::uint64_t       m,
+              std::uint64_t       k,
+              std::uint64_t       n,
               double              p,
               const std::uint8_t* raw,
-              std::size_t         raw_size)
+              std::uint64_t       raw_size)
     {
         if (!raw)
             return false;
@@ -252,11 +252,11 @@ public:
         return true;
     }
 
-    std::size_t bit_count() const { return m; }
-    std::size_t hash_count() const { return k; }
-    std::size_t expected_elements() const { return n; }
-    std::size_t size() const { return bits.size(); } // in bytes
-    double      false_positive() const { return p; }
+    std::uint64_t bit_count() const { return m; }
+    std::uint64_t hash_count() const { return k; }
+    std::uint64_t expected_elements() const { return n; }
+    std::size_t   size() const { return bits.size(); } // in bytes
+    double        false_positive() const { return p; }
 
     const std::uint8_t* raw() const
     {
@@ -267,10 +267,10 @@ public:
     }
 
 private:
-    std::size_t m; // size in bits
-    std::size_t k; // number of hashes
-    std::size_t n; // expected number of elements
-    double      p; // false positive probability(>= 0 && <= 1) TODO: maybe long double?
+    std::uint64_t m; // size in bits
+    std::uint64_t k; // number of hashes
+    std::uint64_t n; // expected number of elements
+    double        p; // false positive probability(> 0 && < 1) TODO: maybe long double?
 
     std::vector<std::uint8_t> bits;
 };
