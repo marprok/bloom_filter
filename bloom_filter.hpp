@@ -140,17 +140,9 @@ void MurmurHash3_x64_128_marios(const void* key, const int len, const uint32_t s
     ((uint64_t*)out)[1] = h2;
 }
 
-inline bool is_close_enough(double a, double b)
-{
-    constexpr double EPSILON = 0.000000001;
-    const double     delta   = std::fabs(a - b);
-    return delta <= EPSILON;
-}
-
 class bloom_filter
 {
 public:
-    // None of the constructors take care of div by zero. They will just crash.
     bloom_filter()
         : m(0)
         , k(0)
@@ -201,37 +193,34 @@ public:
         this->m = m;
         this->k = k;
         this->n = n;
+        this->p = compute_p(m, k, n);
 
         const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        bits.clear();
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
-        p = std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
 
         return true;
     }
 
     bool config(std::uint64_t n, double p)
     {
-        if (is_close_enough(p, 0.0)
-            || p < 0.0
-            || is_close_enough(p, 1.0)
-            || p > 1.0
-            || n == 0)
+        if (p >= 1.0 || p <= 0.0 || n == 0)
             return false;
 
         this->n = n;
         this->p = p;
-
-        m = std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
-        k = std::round((static_cast<double>(m) / n) * std::log(2.0));
+        m       = compute_m(n, p);
+        k       = compute_k(m, n);
 
         const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        bits.clear();
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
 
         return true;
     }
 
-    // Does not check for the values of p and the size of the buffer
-    // correspond to the m, k, n parameters. TODO: fix this
+    // Create a bf from the components of an existing one.
+    // Deep copies the values from the raw byte pointer.
     bool from(std::uint64_t       m,
               std::uint64_t       k,
               std::uint64_t       n,
@@ -239,15 +228,21 @@ public:
               const std::uint8_t* raw,
               std::uint64_t       raw_size)
     {
-        if (!raw)
+        if (p >= 1.0 || p <= 0.0 || n == 0)
             return false;
 
-        this->m = m;
-        this->k = k;
+        const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        if (!raw || raw_size == 0 || byte_count != raw_size)
+            return false;
+
         this->n = n;
         this->p = p;
+        this->m = m;
+        this->k = k;
+
+        bits.clear();
         bits.reserve(raw_size);
-        std::copy(raw, raw + raw_size, bits.begin());
+        std::copy(raw, raw + raw_size, std::back_inserter(bits));
 
         return true;
     }
@@ -273,6 +268,21 @@ private:
     double        p; // false positive probability(> 0 && < 1) TODO: maybe long double?
 
     std::vector<std::uint8_t> bits;
+
+    inline std::uint64_t compute_m(std::uint64_t n, double p) const
+    {
+        return std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
+    }
+
+    inline std::uint64_t compute_k(std::uint64_t m, std::uint64_t n) const
+    {
+        return std::round((static_cast<double>(m) / n) * std::log(2.0));
+    }
+
+    inline double compute_p(std::uint64_t m, std::uint64_t k, std::uint64_t n)
+    {
+        return std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
+    }
 };
 } // BF
 #endif // BLOOM_FILTER_HPP
