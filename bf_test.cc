@@ -159,7 +159,7 @@ TEST(bf_test, hasher_sanity_check)
     {
         const std::string       input_text("");
         constexpr std::uint64_t k = 39;
-        BF::murmur3::hashes     out;
+        BF::hashes              out;
         out.reserve(k);
 
         hasher(input_text.data(), input_text.size(), k, out);
@@ -169,7 +169,7 @@ TEST(bf_test, hasher_sanity_check)
     {
         const std::string       input_text("This is text");
         constexpr std::uint64_t k = 1;
-        BF::murmur3::hashes     out, out2;
+        BF::hashes              out, out2;
         out.reserve(k);
         out2.reserve(k);
         hasher(input_text.data(), input_text.size(), k, out);
@@ -181,8 +181,8 @@ TEST(bf_test, hasher_sanity_check)
 
     for (std::uint64_t k = 0; k < 443; ++k)
     {
-        const std::string   input_text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla non ex dictum, euismod sem a, ultrices nulla.");
-        BF::murmur3::hashes out;
+        const std::string input_text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla non ex dictum, euismod sem a, ultrices nulla.");
+        BF::hashes        out;
         if (k > 1)
             out.reserve(k);
 
@@ -198,6 +198,10 @@ TEST(bf_test, hasher_sanity_check)
             EXPECT_EQ(out.size(), unique.size());
         }
     }
+}
+
+TEST(bf_test, add_test)
+{
 }
 
 } // BF

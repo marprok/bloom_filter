@@ -8,11 +8,11 @@
 
 namespace BF
 {
+typedef std::vector<std::uint64_t> hashes;
+
 class murmur3
 {
 public:
-    typedef std::vector<std::uint64_t> hashes;
-
     // https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
     void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out, const std::uint32_t seed = 0xbeefeebb)
     {
@@ -283,6 +283,23 @@ public:
             return nullptr;
 
         return bits.data();
+    }
+
+    void add(const void* key, const std::uint64_t len)
+    {
+        static const std::uint8_t BIT_POS[] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
+
+        hasher h;
+        hashes hash_values;
+        hash_values.reserve(k);
+        h(key, len, k, hash_values);
+
+        for (auto value : hash_values)
+        {
+            std::uint64_t abs_bit_id = value % bits.size();
+            std::uint64_t byte_id    = abs_bit_id / 8;
+            bits[byte_id] |= BIT_POS[byte_id & 7];
+        }
     }
 
 private:
