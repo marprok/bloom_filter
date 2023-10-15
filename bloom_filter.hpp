@@ -8,138 +8,162 @@
 
 namespace BF
 {
-void MurmurHash3_x64_128_marios(const void* key, const int len, const uint32_t seed, void* out)
+class murmur3
 {
+public:
+    typedef std::vector<std::uint64_t> hashes;
 
-    constexpr auto ROTL64 = [](uint64_t x, int8_t r) constexpr->uint64_t
+    // https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
+    void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out, const std::uint32_t seed = 0xbeefeebb)
     {
-        return (x << r) | (x >> (64 - r));
-    };
+        // do not do any work if it is not needed...
+        if (k == 0)
+            return;
 
-    constexpr auto fmix64 = [](uint64_t k) constexpr->uint64_t
-    {
-        k ^= k >> 33;
-        k *= 0xff51afd7ed558ccdLLU;
-        k ^= k >> 33;
-        k *= 0xc4ceb9fe1a85ec53LLU;
-        k ^= k >> 33;
+        constexpr auto ROTL64 = [](std::uint64_t x, std::int8_t r) constexpr->std::uint64_t
+        {
+            return (x << r) | (x >> (64 - r));
+        };
 
-        return k;
-    };
+        constexpr auto fmix64 = [](std::uint64_t k) constexpr->std::uint64_t
+        {
+            k ^= k >> 33;
+            k *= 0xff51afd7ed558ccdLLU;
+            k ^= k >> 33;
+            k *= 0xc4ceb9fe1a85ec53LLU;
+            k ^= k >> 33;
 
-    constexpr auto getblock64 = [](const uint64_t* p, int i) constexpr->uint64_t
-    {
-        return p[i];
-    };
+            return k;
+        };
 
-    const uint8_t* data    = (const uint8_t*)key;
-    const int      nblocks = len / 16;
+        constexpr auto getblock64 = [](const std::uint64_t* p, std::uint64_t i) constexpr->std::uint64_t
+        {
+            return p[i];
+        };
 
-    uint64_t h1 = seed;
-    uint64_t h2 = seed;
+        const std::uint8_t* data    = (const std::uint8_t*)key;
+        const std::uint64_t nblocks = len / 16;
 
-    const uint64_t c1 = 0x87c37b91114253d5LLU;
-    const uint64_t c2 = 0x4cf5ad432745937fLLU;
+        std::uint64_t h1 = seed;
+        std::uint64_t h2 = seed;
 
-    //----------
-    // body
+        const std::uint64_t c1 = 0x87c37b91114253d5LLU;
+        const std::uint64_t c2 = 0x4cf5ad432745937fLLU;
 
-    const uint64_t* blocks = (const uint64_t*)(data);
+        //----------
+        // body
 
-    for (int i = 0; i < nblocks; i++)
-    {
-        uint64_t k1 = getblock64(blocks, i * 2 + 0);
-        uint64_t k2 = getblock64(blocks, i * 2 + 1);
+        const std::uint64_t* blocks = (const std::uint64_t*)(data);
 
-        k1 *= c1;
-        k1 = ROTL64(k1, 31);
-        k1 *= c2;
-        h1 ^= k1;
+        for (std::uint64_t i = 0; i < nblocks; i++)
+        {
+            std::uint64_t k1 = getblock64(blocks, i * 2 + 0);
+            std::uint64_t k2 = getblock64(blocks, i * 2 + 1);
 
-        h1 = ROTL64(h1, 27);
+            k1 *= c1;
+            k1 = ROTL64(k1, 31);
+            k1 *= c2;
+            h1 ^= k1;
+
+            h1 = ROTL64(h1, 27);
+            h1 += h2;
+            h1 = h1 * 5 + 0x52dce729;
+
+            k2 *= c2;
+            k2 = ROTL64(k2, 33);
+            k2 *= c1;
+            h2 ^= k2;
+
+            h2 = ROTL64(h2, 31);
+            h2 += h1;
+            h2 = h2 * 5 + 0x38495ab5;
+        }
+
+        //----------
+        // tail
+
+        const std::uint8_t* tail = (const std::uint8_t*)(data + nblocks * 16);
+
+        std::uint64_t k1 = 0;
+        std::uint64_t k2 = 0;
+
+        switch (len & 15)
+        {
+        case 15:
+            k2 ^= ((std::uint64_t)tail[14]) << 48;
+        case 14:
+            k2 ^= ((std::uint64_t)tail[13]) << 40;
+        case 13:
+            k2 ^= ((std::uint64_t)tail[12]) << 32;
+        case 12:
+            k2 ^= ((std::uint64_t)tail[11]) << 24;
+        case 11:
+            k2 ^= ((std::uint64_t)tail[10]) << 16;
+        case 10:
+            k2 ^= ((std::uint64_t)tail[9]) << 8;
+        case 9:
+            k2 ^= ((std::uint64_t)tail[8]) << 0;
+            k2 *= c2;
+            k2 = ROTL64(k2, 33);
+            k2 *= c1;
+            h2 ^= k2;
+
+        case 8:
+            k1 ^= ((std::uint64_t)tail[7]) << 56;
+        case 7:
+            k1 ^= ((std::uint64_t)tail[6]) << 48;
+        case 6:
+            k1 ^= ((std::uint64_t)tail[5]) << 40;
+        case 5:
+            k1 ^= ((std::uint64_t)tail[4]) << 32;
+        case 4:
+            k1 ^= ((std::uint64_t)tail[3]) << 24;
+        case 3:
+            k1 ^= ((std::uint64_t)tail[2]) << 16;
+        case 2:
+            k1 ^= ((std::uint64_t)tail[1]) << 8;
+        case 1:
+            k1 ^= ((std::uint64_t)tail[0]) << 0;
+            k1 *= c1;
+            k1 = ROTL64(k1, 31);
+            k1 *= c2;
+            h1 ^= k1;
+        };
+
+        //----------
+        // finalization
+
+        h1 ^= len;
+        h2 ^= len;
+
         h1 += h2;
-        h1 = h1 * 5 + 0x52dce729;
-
-        k2 *= c2;
-        k2 = ROTL64(k2, 33);
-        k2 *= c1;
-        h2 ^= k2;
-
-        h2 = ROTL64(h2, 31);
         h2 += h1;
-        h2 = h2 * 5 + 0x38495ab5;
+
+        h1 = fmix64(h1);
+        h2 = fmix64(h2);
+
+        h1 += h2;
+        h2 += h1;
+
+        if (k == 1)
+            out.push_back(h1);
+        else if (k > 1)
+        {
+            out.push_back(h1);
+            out.push_back(h2);
+            // apply the Kirsch-Mitzenmacher-Optimization
+            for (std::uint64_t i = 3; i <= k; ++i)
+            {
+                auto g = h1 + i * h2;
+                out.push_back(g);
+                std::swap(h1, h2);
+                std::swap(h2, g);
+            }
+        }
     }
+};
 
-    //----------
-    // tail
-
-    const uint8_t* tail = (const uint8_t*)(data + nblocks * 16);
-
-    uint64_t k1 = 0;
-    uint64_t k2 = 0;
-
-    switch (len & 15)
-    {
-    case 15:
-        k2 ^= ((uint64_t)tail[14]) << 48;
-    case 14:
-        k2 ^= ((uint64_t)tail[13]) << 40;
-    case 13:
-        k2 ^= ((uint64_t)tail[12]) << 32;
-    case 12:
-        k2 ^= ((uint64_t)tail[11]) << 24;
-    case 11:
-        k2 ^= ((uint64_t)tail[10]) << 16;
-    case 10:
-        k2 ^= ((uint64_t)tail[9]) << 8;
-    case 9:
-        k2 ^= ((uint64_t)tail[8]) << 0;
-        k2 *= c2;
-        k2 = ROTL64(k2, 33);
-        k2 *= c1;
-        h2 ^= k2;
-
-    case 8:
-        k1 ^= ((uint64_t)tail[7]) << 56;
-    case 7:
-        k1 ^= ((uint64_t)tail[6]) << 48;
-    case 6:
-        k1 ^= ((uint64_t)tail[5]) << 40;
-    case 5:
-        k1 ^= ((uint64_t)tail[4]) << 32;
-    case 4:
-        k1 ^= ((uint64_t)tail[3]) << 24;
-    case 3:
-        k1 ^= ((uint64_t)tail[2]) << 16;
-    case 2:
-        k1 ^= ((uint64_t)tail[1]) << 8;
-    case 1:
-        k1 ^= ((uint64_t)tail[0]) << 0;
-        k1 *= c1;
-        k1 = ROTL64(k1, 31);
-        k1 *= c2;
-        h1 ^= k1;
-    };
-
-    //----------
-    // finalization
-
-    h1 ^= len;
-    h2 ^= len;
-
-    h1 += h2;
-    h2 += h1;
-
-    h1 = fmix64(h1);
-    h2 = fmix64(h2);
-
-    h1 += h2;
-    h2 += h1;
-
-    ((uint64_t*)out)[0] = h1;
-    ((uint64_t*)out)[1] = h2;
-}
-
+template <typename hasher = murmur3>
 class bloom_filter
 {
 public:

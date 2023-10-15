@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <gtest/gtest.h>
+#include <set>
+#include <string>
 
 namespace BF
 {
@@ -149,4 +151,53 @@ TEST(bf_test, from_existing_data)
         EXPECT_EQ(std::memcmp(bf.raw(), raw_bytes, bf.size()), 0);
     }
 }
+
+TEST(bf_test, hasher_sanity_check)
+{
+    BF::murmur3 hasher;
+
+    {
+        const std::string       input_text("");
+        constexpr std::uint64_t k = 39;
+        BF::murmur3::hashes     out;
+        out.reserve(k);
+
+        hasher(input_text.data(), input_text.size(), k, out);
+        EXPECT_EQ(out.size(), k);
+    }
+
+    {
+        const std::string       input_text("This is text");
+        constexpr std::uint64_t k = 1;
+        BF::murmur3::hashes     out, out2;
+        out.reserve(k);
+        out2.reserve(k);
+        hasher(input_text.data(), input_text.size(), k, out);
+        hasher(input_text.data(), input_text.size(), k, out2, 0x12345678);
+        EXPECT_EQ(out.size(), k);
+        EXPECT_EQ(out2.size(), k);
+        EXPECT_NE(out[0], out2[0]);
+    }
+
+    for (std::uint64_t k = 0; k < 443; ++k)
+    {
+        const std::string   input_text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla non ex dictum, euismod sem a, ultrices nulla.");
+        BF::murmur3::hashes out;
+        if (k > 1)
+            out.reserve(k);
+
+        hasher(input_text.data(), input_text.size(), k, out);
+        EXPECT_EQ(out.size(), k);
+        if (k > 1)
+        {
+            std::set<std::uint64_t> unique;
+            for (const auto h : out)
+                unique.insert(h);
+
+            EXPECT_EQ(out.size(), k);
+            EXPECT_EQ(out.size(), unique.size());
+        }
+    }
+}
+
 } // BF
