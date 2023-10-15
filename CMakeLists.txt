@@ -19,11 +19,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
-find_package(OpenSSL REQUIRED)
-
-#target_include_directories(${PROJECT_NAME} PRIVATE .)
 target_sources(${PROJECT_NAME} PRIVATE bf_test.cc)
-target_link_libraries(${PROJECT_NAME} ${OPENSSL_LIBRARIES} gtest_main)
+target_link_libraries(${PROJECT_NAME} gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(${PROJECT_NAME})
