@@ -287,18 +287,22 @@ public:
 
     void add(const void* key, const std::uint64_t len)
     {
+        if (m == 0 && k == 0 && n == 0 && p == 0.0)
+            return;
+
         static const std::uint8_t BIT_POS[] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
 
         hasher h;
         hashes hash_values;
         hash_values.reserve(k);
         h(key, len, k, hash_values);
-
-        for (auto value : hash_values)
+        std::uint64_t count = std::min(k, hash_values.size());
+        for (std::uint64_t i = 0; i < count; ++i)
         {
-            std::uint64_t abs_bit_id = value % bits.size();
+            std::uint64_t value      = hash_values[i];
+            std::uint64_t abs_bit_id = value % m;
             std::uint64_t byte_id    = abs_bit_id / 8;
-            bits[byte_id] |= BIT_POS[byte_id & 7];
+            bits[byte_id] |= BIT_POS[abs_bit_id & 7];
         }
     }
 

@@ -202,6 +202,34 @@ TEST(bf_test, hasher_sanity_check)
 
 TEST(bf_test, add_test)
 {
+
+    {
+        constexpr std::uint64_t BIT_COUNT  = 127u;
+        constexpr std::uint64_t BYTE_COUNT = BIT_COUNT / 8 + static_cast<bool>(BIT_COUNT % 8);
+        constexpr std::uint64_t k          = 8;
+        class mock_hash
+        {
+        public:
+            void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out)
+            {
+                static std::uint64_t bit_index = 0;
+                static_cast<void>(key);
+                static_cast<void>(len);
+                static_cast<void>(k);
+                for (std::uint64_t i = 0; i < k; ++i)
+                    out.push_back(bit_index++ % BIT_COUNT);
+            }
+        };
+
+        BF::bloom_filter<mock_hash> bf;
+        bf.config(BIT_COUNT, k, 50);
+        for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
+            bf.add(&i, sizeof(i));
+        auto raw = bf.raw();
+        ASSERT_TRUE(raw != nullptr);
+        for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
+            EXPECT_TRUE(raw[i] & 0xFF);
+    }
 }
 
 } // BF
