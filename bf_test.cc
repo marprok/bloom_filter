@@ -262,7 +262,10 @@ TEST(bf_test, contains)
         ASSERT_TRUE(bf.config(ELEMENT_COUNT, FP));
 
         for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
+        {
             bf.add(&i, sizeof(i));
+            EXPECT_TRUE(bf.contains(&i, sizeof(i)));
+        }
 
         std::uint64_t false_positive = 0;
         for (std::uint64_t i = ELEMENT_COUNT; i < 2 * ELEMENT_COUNT; ++i)
