@@ -13,47 +13,20 @@ typedef std::vector<std::uint64_t> hashes;
 class murmur3
 {
 public:
-    // https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
+    // taken from: https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
     void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out, const std::uint32_t seed = 0xbeefeebb)
     {
         // do not do any work if it is not needed...
         if (k == 0)
             return;
 
-        constexpr auto ROTL64 = [](std::uint64_t x, std::int8_t r) constexpr->std::uint64_t
-        {
-            return (x << r) | (x >> (64 - r));
-        };
-
-        constexpr auto fmix64 = [](std::uint64_t k) constexpr->std::uint64_t
-        {
-            k ^= k >> 33;
-            k *= 0xff51afd7ed558ccdLLU;
-            k ^= k >> 33;
-            k *= 0xc4ceb9fe1a85ec53LLU;
-            k ^= k >> 33;
-
-            return k;
-        };
-
-        constexpr auto getblock64 = [](const std::uint64_t* p, std::uint64_t i) constexpr->std::uint64_t
-        {
-            return p[i];
-        };
-
-        const std::uint8_t* data    = (const std::uint8_t*)key;
-        const std::uint64_t nblocks = len / 16;
-
-        std::uint64_t h1 = seed;
-        std::uint64_t h2 = seed;
-
-        const std::uint64_t c1 = 0x87c37b91114253d5LLU;
-        const std::uint64_t c2 = 0x4cf5ad432745937fLLU;
-
-        //----------
-        // body
-
-        const std::uint64_t* blocks = (const std::uint64_t*)(data);
+        const std::uint8_t*  data    = (const std::uint8_t*)key;
+        const std::uint64_t  nblocks = len / 16;
+        std::uint64_t        h1      = seed;
+        std::uint64_t        h2      = seed;
+        const std::uint64_t  c1      = 0x87c37b91114253d5LLU;
+        const std::uint64_t  c2      = 0x4cf5ad432745937fLLU;
+        const std::uint64_t* blocks  = (const std::uint64_t*)(data);
 
         for (std::uint64_t i = 0; i < nblocks; i++)
         {
@@ -79,13 +52,9 @@ public:
             h2 = h2 * 5 + 0x38495ab5;
         }
 
-        //----------
-        // tail
-
         const std::uint8_t* tail = (const std::uint8_t*)(data + nblocks * 16);
-
-        std::uint64_t k1 = 0;
-        std::uint64_t k2 = 0;
+        std::uint64_t       k1   = 0;
+        std::uint64_t       k2   = 0;
 
         switch (len & 15)
         {
@@ -130,9 +99,6 @@ public:
             h1 ^= k1;
         };
 
-        //----------
-        // finalization
-
         h1 ^= len;
         h2 ^= len;
 
@@ -160,6 +126,28 @@ public:
                 std::swap(h2, g);
             }
         }
+    }
+
+private:
+    inline std::uint64_t ROTL64(std::uint64_t x, std::int8_t r) const
+    {
+        return (x << r) | (x >> (64 - r));
+    }
+
+    inline std::uint64_t fmix64(std::uint64_t k) const
+    {
+        k ^= k >> 33;
+        k *= 0xff51afd7ed558ccdLLU;
+        k ^= k >> 33;
+        k *= 0xc4ceb9fe1a85ec53LLU;
+        k ^= k >> 33;
+
+        return k;
+    }
+
+    inline std::uint64_t getblock64(const std::uint64_t* p, std::uint64_t i) const
+    {
+        return p[i];
     }
 };
 
@@ -290,13 +278,11 @@ public:
         if (m == 0 && k == 0 && n == 0 && p == 0.0)
             return;
 
-        static const std::uint8_t BIT_POS[] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
-
         hasher h;
         hashes hash_values;
         hash_values.reserve(k);
         h(key, len, k, hash_values);
-        std::uint64_t count = std::min(k, hash_values.size());
+        const std::uint64_t count = std::min(k, hash_values.size());
         for (std::uint64_t i = 0; i < count; ++i)
         {
             std::uint64_t value      = hash_values[i];
@@ -306,13 +292,34 @@ public:
         }
     }
 
-private:
-    std::uint64_t m; // size in bits
-    std::uint64_t k; // number of hashes
-    std::uint64_t n; // expected number of elements
-    double        p; // false positive probability(> 0 && < 1) TODO: maybe long double?
+    bool contains(const void* key, const std::uint64_t len) const
+    {
+        if (m == 0 && k == 0 && n == 0 && p == 0.0)
+            return false;
 
+        hasher h;
+        hashes hash_values;
+        hash_values.reserve(k);
+        h(key, len, k, hash_values);
+        const std::uint64_t count = std::min(k, hash_values.size());
+        for (std::uint64_t i = 0; i < count; ++i)
+        {
+            std::uint64_t value      = hash_values[i];
+            std::uint64_t abs_bit_id = value % m;
+            std::uint64_t byte_id    = abs_bit_id / 8;
+            if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
+                return false;
+        }
+        return true;
+    }
+
+private:
+    std::uint64_t             m; // size in bits
+    std::uint64_t             k; // number of hashes
+    std::uint64_t             n; // expected number of elements
+    double                    p; // false positive probability(> 0 && < 1) TODO: maybe long double?
     std::vector<std::uint8_t> bits;
+    const std::uint8_t        BIT_POS[8] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
 
     inline std::uint64_t compute_m(std::uint64_t n, double p) const
     {
@@ -329,5 +336,6 @@ private:
         return std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
     }
 };
+
 } // BF
 #endif // BLOOM_FILTER_HPP

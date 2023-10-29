@@ -200,35 +200,74 @@ TEST(bf_test, hasher_sanity_check)
     }
 }
 
-TEST(bf_test, add_test)
+TEST(bf_test, add)
 {
 
+    constexpr std::uint64_t BIT_COUNT  = 127u;
+    constexpr std::uint64_t BYTE_COUNT = BIT_COUNT / 8 + static_cast<bool>(BIT_COUNT % 8);
+    constexpr std::uint64_t k          = 8;
+    class mock_hash
     {
-        constexpr std::uint64_t BIT_COUNT  = 127u;
-        constexpr std::uint64_t BYTE_COUNT = BIT_COUNT / 8 + static_cast<bool>(BIT_COUNT % 8);
-        constexpr std::uint64_t k          = 8;
-        class mock_hash
+    public:
+        void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out)
         {
-        public:
-            void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out)
-            {
-                static std::uint64_t bit_index = 0;
-                static_cast<void>(key);
-                static_cast<void>(len);
-                static_cast<void>(k);
-                for (std::uint64_t i = 0; i < k; ++i)
-                    out.push_back(bit_index++ % BIT_COUNT);
-            }
-        };
+            static std::uint64_t bit_index = BIT_COUNT; // bloom_filter should wrap the bit index
+            static_cast<void>(key);
+            static_cast<void>(len);
+            static_cast<void>(k);
+            for (std::uint64_t i = 0; i < k; ++i)
+                out.push_back(bit_index++);
+        }
+    };
 
-        BF::bloom_filter<mock_hash> bf;
-        bf.config(BIT_COUNT, k, 50);
-        for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
+    BF::bloom_filter<mock_hash> bf;
+    ASSERT_TRUE(bf.config(BIT_COUNT, k, 50));
+    auto raw = bf.raw();
+    for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
+        EXPECT_EQ(raw[i], 0x00);
+    for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
+        bf.add(&i, sizeof(i));
+    ASSERT_TRUE(raw != nullptr);
+    for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
+        EXPECT_TRUE(raw[i] & 0xFF);
+}
+
+TEST(bf_test, contains)
+{
+    {
+        BF::bloom_filter        bf;
+        constexpr std::uint64_t ELEMENT_COUNT = 10000000;
+        constexpr double        FP            = 0.23;
+        ASSERT_TRUE(bf.config(ELEMENT_COUNT, FP));
+
+        for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
             bf.add(&i, sizeof(i));
-        auto raw = bf.raw();
-        ASSERT_TRUE(raw != nullptr);
-        for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
-            EXPECT_TRUE(raw[i] & 0xFF);
+
+        std::uint64_t false_positive = 0;
+        for (std::uint64_t i = ELEMENT_COUNT; i < 2 * ELEMENT_COUNT; ++i)
+        {
+            if (bf.contains(&i, sizeof(i)))
+                false_positive++;
+        }
+        EXPECT_TRUE(is_close_enough(static_cast<double>(false_positive) / ELEMENT_COUNT, FP, 0.009));
+    }
+
+    {
+        BF::bloom_filter        bf;
+        constexpr std::uint64_t ELEMENT_COUNT = 234;
+        constexpr double        FP            = 0.1;
+        ASSERT_TRUE(bf.config(ELEMENT_COUNT, FP));
+
+        for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
+            bf.add(&i, sizeof(i));
+
+        std::uint64_t false_positive = 0;
+        for (std::uint64_t i = ELEMENT_COUNT; i < 2 * ELEMENT_COUNT; ++i)
+        {
+            if (bf.contains(&i, sizeof(i)))
+                false_positive++;
+        }
+        EXPECT_TRUE(is_close_enough(static_cast<double>(false_positive) / ELEMENT_COUNT, FP, 0.09));
     }
 }
 
