@@ -14,7 +14,7 @@ class murmur3
 {
 public:
     // taken from: https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
-    void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out, const std::uint32_t seed = 0xbeefeebb)
+    void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out, const std::uint32_t seed = 0xbeefeebb) const
     {
         // do not do any work if it is not needed...
         if (k == 0)
@@ -278,7 +278,6 @@ public:
         if (m == 0 && k == 0 && n == 0 && p == 0.0)
             return;
 
-        hasher h;
         hashes hash_values;
         hash_values.reserve(k);
         h(key, len, k, hash_values);
@@ -297,7 +296,6 @@ public:
         if (m == 0 && k == 0 && n == 0 && p == 0.0)
             return false;
 
-        hasher h;
         hashes hash_values;
         hash_values.reserve(k);
         h(key, len, k, hash_values);
@@ -320,6 +318,7 @@ private:
     double                    p; // false positive probability(> 0 && < 1) TODO: maybe long double?
     std::vector<std::uint8_t> bits;
     const std::uint8_t        BIT_POS[8] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
+    hasher                    h;
 
     inline std::uint64_t compute_m(std::uint64_t n, double p) const
     {
