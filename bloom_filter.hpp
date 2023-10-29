@@ -284,9 +284,9 @@ public:
         const std::uint64_t count = std::min(k, hash_values.size());
         for (std::uint64_t i = 0; i < count; ++i)
         {
-            std::uint64_t value      = hash_values[i];
-            std::uint64_t abs_bit_id = value % m;
-            std::uint64_t byte_id    = abs_bit_id / 8;
+            const std::uint64_t value      = hash_values[i];
+            const std::uint64_t abs_bit_id = value % m;
+            const std::uint64_t byte_id    = abs_bit_id / 8;
             bits[byte_id] |= BIT_POS[abs_bit_id & 7];
         }
     }
@@ -302,9 +302,9 @@ public:
         const std::uint64_t count = std::min(k, hash_values.size());
         for (std::uint64_t i = 0; i < count; ++i)
         {
-            std::uint64_t value      = hash_values[i];
-            std::uint64_t abs_bit_id = value % m;
-            std::uint64_t byte_id    = abs_bit_id / 8;
+            const std::uint64_t value      = hash_values[i];
+            const std::uint64_t abs_bit_id = value % m;
+            const std::uint64_t byte_id    = abs_bit_id / 8;
             if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
                 return false;
         }
