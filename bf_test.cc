@@ -155,13 +155,11 @@ TEST(bf_test, from_existing_data)
 TEST(bf_test, hasher_sanity_check)
 {
     BF::murmur3 hasher;
-
     {
         const std::string       input_text("");
         constexpr std::uint64_t k = 39;
         BF::hashes              out;
         out.reserve(k);
-
         hasher(input_text.data(), input_text.size(), k, out);
         EXPECT_EQ(out.size(), k);
     }
@@ -190,10 +188,7 @@ TEST(bf_test, hasher_sanity_check)
         EXPECT_EQ(out.size(), k);
         if (k > 1)
         {
-            std::set<std::uint64_t> unique;
-            for (const auto h : out)
-                unique.insert(h);
-
+            std::set<std::uint64_t> unique(out.begin(), out.end());
             EXPECT_EQ(out.size(), k);
             EXPECT_EQ(out.size(), unique.size());
         }
@@ -222,7 +217,7 @@ TEST(bf_test, add)
 
     BF::bloom_filter<mock_hash> bf;
     ASSERT_TRUE(bf.config(BIT_COUNT, k, 50));
-    auto raw = bf.raw();
+    const auto raw = bf.raw();
     for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
         EXPECT_EQ(raw[i], 0x00);
     for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
@@ -235,10 +230,18 @@ TEST(bf_test, add)
 TEST(bf_test, contains)
 {
     {
+        BF::bloom_filter bf;
+        std::string      temp("temp");
+        ASSERT_FALSE(bf.contains(temp.data(), temp.size()));
+        bf.add(temp.data(), temp.size());
+        ASSERT_FALSE(bf.contains(temp.data(), temp.size()));
+    }
+
+    {
         BF::bloom_filter        bf;
         constexpr std::uint64_t ELEMENT_COUNT = 10000000;
-        constexpr double        FP            = 0.23;
-        ASSERT_TRUE(bf.config(ELEMENT_COUNT, FP));
+        constexpr double        FPR           = 0.23;
+        ASSERT_TRUE(bf.config(ELEMENT_COUNT, FPR));
 
         for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
         {
@@ -252,14 +255,14 @@ TEST(bf_test, contains)
             if (bf.contains(&i, sizeof(i)))
                 false_positive++;
         }
-        EXPECT_TRUE(is_close_enough(static_cast<double>(false_positive) / ELEMENT_COUNT, FP, 0.009));
+        EXPECT_TRUE(is_close_enough(static_cast<double>(false_positive) / ELEMENT_COUNT, FPR, 0.009));
     }
 
     {
         BF::bloom_filter        bf;
         constexpr std::uint64_t ELEMENT_COUNT = 234;
-        constexpr double        FP            = 0.1;
-        ASSERT_TRUE(bf.config(ELEMENT_COUNT, FP));
+        constexpr double        FPR           = 0.1;
+        ASSERT_TRUE(bf.config(ELEMENT_COUNT, FPR));
 
         for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
         {
@@ -273,7 +276,7 @@ TEST(bf_test, contains)
             if (bf.contains(&i, sizeof(i)))
                 false_positive++;
         }
-        EXPECT_TRUE(is_close_enough(static_cast<double>(false_positive) / ELEMENT_COUNT, FP, 0.09));
+        EXPECT_TRUE(is_close_enough(static_cast<double>(false_positive) / ELEMENT_COUNT, FPR, 0.09));
     }
 }
 

@@ -37,16 +37,13 @@ public:
             k1 = ROTL64(k1, 31);
             k1 *= c2;
             h1 ^= k1;
-
             h1 = ROTL64(h1, 27);
             h1 += h2;
             h1 = h1 * 5 + 0x52dce729;
-
             k2 *= c2;
             k2 = ROTL64(k2, 33);
             k2 *= c1;
             h2 ^= k2;
-
             h2 = ROTL64(h2, 31);
             h2 += h1;
             h2 = h2 * 5 + 0x38495ab5;
@@ -76,7 +73,6 @@ public:
             k2 = ROTL64(k2, 33);
             k2 *= c1;
             h2 ^= k2;
-
         case 8:
             k1 ^= ((std::uint64_t)tail[7]) << 56;
         case 7:
@@ -101,13 +97,10 @@ public:
 
         h1 ^= len;
         h2 ^= len;
-
         h1 += h2;
         h2 += h1;
-
         h1 = fmix64(h1);
         h2 = fmix64(h2);
-
         h1 += h2;
         h2 += h1;
 
@@ -260,22 +253,25 @@ public:
     }
 
     std::uint64_t bit_count() const { return m; }
+
     std::uint64_t hash_count() const { return k; }
+
     std::uint64_t expected_elements() const { return n; }
-    std::size_t   size() const { return bits.size(); } // in bytes
-    double        false_positive() const { return p; }
+
+    double false_positive() const { return p; }
+
+    std::size_t size() const { return bits.size(); } // in bytes
 
     const std::uint8_t* raw() const
     {
         if (bits.empty())
             return nullptr;
-
         return bits.data();
     }
 
     void add(const void* key, const std::uint64_t len)
     {
-        if (m == 0 && k == 0 && n == 0 && p == 0.0)
+        if (m == 0 || k == 0 || n == 0 || p == 0.0)
             return;
 
         hashes hash_values;
@@ -293,7 +289,7 @@ public:
 
     bool contains(const void* key, const std::uint64_t len) const
     {
-        if (m == 0 && k == 0 && n == 0 && p == 0.0)
+        if (m == 0 || k == 0 || n == 0 || p == 0.0)
             return false;
 
         hashes hash_values;
@@ -312,12 +308,13 @@ public:
     }
 
 private:
+    static constexpr std::uint8_t BIT_POS[8] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
+
     std::uint64_t             m; // size in bits
     std::uint64_t             k; // number of hashes
     std::uint64_t             n; // expected number of elements
-    double                    p; // false positive probability(> 0 && < 1) TODO: maybe long double?
+    double                    p; // false positive probability(> 0 && < 1)
     std::vector<std::uint8_t> bits;
-    const std::uint8_t        BIT_POS[8] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
     hasher                    h;
 
     inline std::uint64_t compute_m(std::uint64_t n, double p) const
