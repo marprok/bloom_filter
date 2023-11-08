@@ -269,22 +269,25 @@ public:
         return bits.data();
     }
 
-    void add(const void* key, const std::uint64_t len)
+    bool add(const void* key, const std::uint64_t len)
     {
         if (m == 0 || k == 0 || n == 0 || p == 0.0)
-            return;
+            return false;
 
         hashes hash_values;
         hash_values.reserve(k);
         h(key, len, k, hash_values);
-        const std::uint64_t count = std::min(k, hash_values.size());
-        for (std::uint64_t i = 0; i < count; ++i)
+
+        if (k != hash_values.size())
+            return false;
+
+        for (std::uint64_t i = 0; i < k; ++i)
         {
-            const std::uint64_t value      = hash_values[i];
-            const std::uint64_t abs_bit_id = value % m;
+            const std::uint64_t abs_bit_id = hash_values[i] % m;
             const std::uint64_t byte_id    = abs_bit_id / 8;
             bits[byte_id] |= BIT_POS[abs_bit_id & 7];
         }
+        return true;
     }
 
     bool contains(const void* key, const std::uint64_t len) const
@@ -295,11 +298,13 @@ public:
         hashes hash_values;
         hash_values.reserve(k);
         h(key, len, k, hash_values);
-        const std::uint64_t count = std::min(k, hash_values.size());
-        for (std::uint64_t i = 0; i < count; ++i)
+
+        if (k != hash_values.size())
+            return false;
+
+        for (std::uint64_t i = 0; i < k; ++i)
         {
-            const std::uint64_t value      = hash_values[i];
-            const std::uint64_t abs_bit_id = value % m;
+            const std::uint64_t abs_bit_id = hash_values[i] % m;
             const std::uint64_t byte_id    = abs_bit_id / 8;
             if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
                 return false;

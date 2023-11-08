@@ -221,7 +221,7 @@ TEST(bf_test, add)
     for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
         EXPECT_EQ(raw[i], 0x00);
     for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
-        bf.add(&i, sizeof(i));
+        ASSERT_TRUE(bf.add(&i, sizeof(i)));
     ASSERT_TRUE(raw != nullptr);
     for (std::uint64_t i = 0; i < BYTE_COUNT; ++i)
         EXPECT_TRUE(raw[i] & 0xFF);
@@ -233,7 +233,7 @@ TEST(bf_test, contains)
         BF::bloom_filter bf;
         std::string      temp("temp");
         ASSERT_FALSE(bf.contains(temp.data(), temp.size()));
-        bf.add(temp.data(), temp.size());
+        ASSERT_FALSE(bf.add(temp.data(), temp.size()));
         ASSERT_FALSE(bf.contains(temp.data(), temp.size()));
     }
 
@@ -245,7 +245,7 @@ TEST(bf_test, contains)
 
         for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
         {
-            bf.add(&i, sizeof(i));
+            ASSERT_TRUE(bf.add(&i, sizeof(i)));
             EXPECT_TRUE(bf.contains(&i, sizeof(i)));
         }
 
@@ -266,7 +266,7 @@ TEST(bf_test, contains)
 
         for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
         {
-            bf.add(&i, sizeof(i));
+            ASSERT_TRUE(bf.add(&i, sizeof(i)));
             EXPECT_TRUE(bf.contains(&i, sizeof(i)));
         }
 
