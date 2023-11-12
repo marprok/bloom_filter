@@ -300,7 +300,7 @@ TEST(bf_test, merge)
     EXPECT_TRUE(is_close_enough(bf.false_positive(), p, 0.0000009));
     EXPECT_EQ(bf.size(), byte_count);
     EXPECT_NE(bf.raw(), nullptr);
-    EXPECT_NE(bf.raw(), raw_bytes); // the memory location should be different
+    EXPECT_NE(bf.raw(), raw_bytes);
     EXPECT_EQ(std::memcmp(bf.raw(), raw_bytes, bf.size()), 0);
 
     for (std::uint64_t i = 0; i < byte_count; ++i)
@@ -314,7 +314,7 @@ TEST(bf_test, merge)
     EXPECT_TRUE(is_close_enough(other.false_positive(), p, 0.0000009));
     EXPECT_EQ(other.size(), byte_count);
     EXPECT_NE(other.raw(), nullptr);
-    EXPECT_NE(other.raw(), raw_bytes); // the memory location should be different
+    EXPECT_NE(other.raw(), raw_bytes);
     EXPECT_EQ(std::memcmp(other.raw(), raw_bytes, other.size()), 0);
 
     EXPECT_TRUE(bf.merge(other));
