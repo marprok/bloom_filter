@@ -280,4 +280,49 @@ TEST(bf_test, contains)
     }
 }
 
+TEST(bf_test, merge)
+{
+    constexpr std::uint64_t byte_count = 1234;
+    std::uint8_t            raw_bytes[byte_count];
+    constexpr std::uint64_t n = 1023;
+    constexpr std::uint64_t m = byte_count * 8;
+    constexpr std::uint64_t k = 2;
+    constexpr double        p = 0.003322;
+
+    for (std::uint64_t i = 0; i < byte_count; ++i)
+        raw_bytes[i] = 0xAA;
+
+    BF::bloom_filter bf;
+    EXPECT_TRUE(bf.from(m, k, n, p, raw_bytes, byte_count));
+    EXPECT_EQ(bf.bit_count(), m);
+    EXPECT_EQ(bf.hash_count(), k);
+    EXPECT_EQ(bf.expected_elements(), n);
+    EXPECT_TRUE(is_close_enough(bf.false_positive(), p, 0.0000009));
+    EXPECT_EQ(bf.size(), byte_count);
+    EXPECT_NE(bf.raw(), nullptr);
+    EXPECT_NE(bf.raw(), raw_bytes); // the memory location should be different
+    EXPECT_EQ(std::memcmp(bf.raw(), raw_bytes, bf.size()), 0);
+
+    for (std::uint64_t i = 0; i < byte_count; ++i)
+        raw_bytes[i] = 0x55;
+
+    BF::bloom_filter other;
+    EXPECT_TRUE(other.from(m, k, n, p, raw_bytes, byte_count));
+    EXPECT_EQ(other.bit_count(), m);
+    EXPECT_EQ(other.hash_count(), k);
+    EXPECT_EQ(other.expected_elements(), n);
+    EXPECT_TRUE(is_close_enough(other.false_positive(), p, 0.0000009));
+    EXPECT_EQ(other.size(), byte_count);
+    EXPECT_NE(other.raw(), nullptr);
+    EXPECT_NE(other.raw(), raw_bytes); // the memory location should be different
+    EXPECT_EQ(std::memcmp(other.raw(), raw_bytes, other.size()), 0);
+
+    EXPECT_TRUE(bf.merge(other));
+    // other should not have change
+    EXPECT_EQ(std::memcmp(other.raw(), raw_bytes, other.size()), 0);
+    const auto bf_raw = bf.raw();
+    for (std::uint64_t i = 0; i < byte_count; ++i)
+        EXPECT_EQ(bf_raw[i], 0xAA | 0x55);
+}
+
 } // BF

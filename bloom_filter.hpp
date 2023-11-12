@@ -312,6 +312,21 @@ public:
         return true;
     }
 
+    bool merge(const bloom_filter& other)
+    {
+        if (m == 0 || k == 0 || n == 0 || p == 0.0)
+            return false;
+
+        if (m != other.m || k != other.k || n != other.n
+            || p != other.p || bits.size() != other.bits.size())
+            return false;
+
+        for (std::uint64_t i = 0; i < bits.size(); ++i)
+            bits[i] |= other.bits[i];
+
+        return true;
+    }
+
 private:
     static constexpr std::uint8_t BIT_POS[8] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
 
