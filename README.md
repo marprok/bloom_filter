@@ -8,6 +8,8 @@ The hash function that is used by `bloom_filter` is a template parameter to allo
 
 By default, the hash function is `murmur3` which is in the public domain and can be found [here](https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp).
 
+[Kirsch-Mitzenmacher-Optimization](https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf) is used to approximate `k` hash functions.
+
 # Usage
 The [unit tests](bf_test.cc) that are in this repository can be used as a guide on how to properly use `bloom_filter`.
 
