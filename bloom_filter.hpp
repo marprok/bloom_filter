@@ -347,7 +347,7 @@ private:
         return std::round((static_cast<double>(m) / n) * std::log(2.0));
     }
 
-    inline double compute_p(std::uint64_t m, std::uint64_t k, std::uint64_t n)
+    inline double compute_p(std::uint64_t m, std::uint64_t k, std::uint64_t n) const
     {
         return std::pow(1.0 - std::exp((-static_cast<double>(k) * n) / m), k);
     }
