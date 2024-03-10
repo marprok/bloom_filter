@@ -56,8 +56,8 @@ TEST(bf_test, ownership)
         EXPECT_EQ(bf2.false_positive(), 0.0);
         EXPECT_EQ(bf2.raw(), nullptr);
 
-        BF::bloom_filter bf3 = bf2;
-        EXPECT_EQ(bf3, bf2);
+        BF::bloom_filter bf3 = bf;
+        EXPECT_EQ(bf3, bf);
     }
 }
 
