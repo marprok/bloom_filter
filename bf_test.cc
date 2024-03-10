@@ -55,6 +55,9 @@ TEST(bf_test, ownership)
         EXPECT_EQ(bf2.size(), 0);
         EXPECT_EQ(bf2.false_positive(), 0.0);
         EXPECT_EQ(bf2.raw(), nullptr);
+
+        BF::bloom_filter bf3 = bf2;
+        EXPECT_EQ(bf3, bf2);
     }
 }
 
@@ -365,11 +368,17 @@ TEST(bf_test, equality)
 
     EXPECT_NE(first, third);
     EXPECT_NE(second, third);
-    third = first; // first is no longer valid
+    third = std::move(first); // first is no longer valid
     EXPECT_EQ(second, third);
+    EXPECT_NE(first, third);
 
-    BF::bloom_filter fourth(second); // second is no longer valid
+    BF::bloom_filter fourth(std::move(second)); // second is no longer valid
     EXPECT_EQ(third, fourth);
+    EXPECT_NE(second, third);
+
+    BF::bloom_filter fifth = fourth;
+    EXPECT_EQ(fifth, fourth);
+    EXPECT_EQ(fifth, third);
 }
 
 } // BF
