@@ -167,7 +167,10 @@ public:
         , p(other.p)
     {
         if (!other.bits.empty())
-            std::swap(bits, other.bits);
+        {
+            bits = other.bits;
+            other.bits.clear();
+        }
         other.m = other.k = other.n = other.p = 0;
     }
 
@@ -182,8 +185,8 @@ public:
 
             if (!other.bits.empty())
             {
-                std::swap(bits, other.bits);
-                other.bits.clear(); // in case it is not empty
+                bits = other.bits;
+                other.bits.clear();
             }
             other.m = other.k = other.n = other.p = 0;
         }
@@ -325,6 +328,15 @@ public:
             bits[i] |= other.bits[i];
 
         return true;
+    }
+
+    constexpr bool operator==(const bloom_filter& other) const
+    {
+        if (m != other.m || k != other.k || n != other.n
+            || p != other.p)
+            return false;
+
+        return bits == other.bits;
     }
 
 private:

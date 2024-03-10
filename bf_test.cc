@@ -325,4 +325,51 @@ TEST(bf_test, merge)
         EXPECT_EQ(bf_raw[i], 0xAA | 0x55);
 }
 
+TEST(bf_test, equality)
+{
+    BF::bloom_filter first;
+    BF::bloom_filter second;
+    EXPECT_EQ(first, second);
+
+    constexpr std::uint64_t n = 512;
+    constexpr std::uint64_t m = 2048;
+    constexpr std::uint64_t k = 4;
+
+    EXPECT_TRUE(first.config(m, k, n));
+    EXPECT_TRUE(second.config(m, k, n));
+
+    EXPECT_EQ(first, second);
+
+    constexpr std::string_view v1("this is the first test");
+    constexpr std::string_view v2("this is the second test");
+    constexpr std::string_view v3("this is the third test");
+
+    first.add(v1.data(), v1.size());
+    second.add(v1.data(), v1.size());
+    EXPECT_EQ(first, second);
+
+    first.add(v2.data(), v2.size());
+    second.add(v2.data(), v2.size());
+    EXPECT_EQ(first, second);
+
+    first.add(v3.data(), v3.size());
+    EXPECT_NE(first, second);
+    second.add(v3.data(), v3.size());
+    EXPECT_EQ(first, second);
+
+    BF::bloom_filter third;
+    EXPECT_TRUE(third.config(m - 1, k - 1, n - 1));
+    third.add(v1.data(), v1.size());
+    third.add(v2.data(), v2.size());
+    third.add(v3.data(), v3.size());
+
+    EXPECT_NE(first, third);
+    EXPECT_NE(second, third);
+    third = first; // first is no longer valid
+    EXPECT_EQ(second, third);
+
+    BF::bloom_filter fourth(second); // second is no longer valid
+    EXPECT_EQ(third, fourth);
+}
+
 } // BF
