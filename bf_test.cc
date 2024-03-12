@@ -3,7 +3,7 @@
 #include <cstring>
 #include <gtest/gtest.h>
 #include <set>
-#include <string>
+#include <string_view>
 
 namespace BF
 {
@@ -159,18 +159,18 @@ TEST(bf_test, hasher_sanity_check)
 {
     BF::murmur3 hasher;
     {
-        const std::string       input_text("");
-        constexpr std::uint64_t k = 39;
-        BF::hashes              out;
+        constexpr std::string_view input_text("");
+        constexpr std::uint64_t    k = 39;
+        BF::hashes                 out;
         out.reserve(k);
         hasher(input_text.data(), input_text.size(), k, out);
         EXPECT_EQ(out.size(), k);
     }
 
     {
-        const std::string       input_text("This is text");
-        constexpr std::uint64_t k = 1;
-        BF::hashes              out, out2;
+        constexpr std::string_view input_text("This is text");
+        constexpr std::uint64_t    k = 1;
+        BF::hashes                 out, out2;
         out.reserve(k);
         out2.reserve(k);
         hasher(input_text.data(), input_text.size(), k, out);
@@ -182,8 +182,8 @@ TEST(bf_test, hasher_sanity_check)
 
     for (std::uint64_t k = 0; k < 443; ++k)
     {
-        const std::string input_text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla non ex dictum, euismod sem a, ultrices nulla.");
-        BF::hashes        out;
+        constexpr std::string_view input_text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla non ex dictum, euismod sem a, ultrices nulla.");
+        BF::hashes                 out;
         if (k > 1)
             out.reserve(k);
 
@@ -233,8 +233,8 @@ TEST(bf_test, add)
 TEST(bf_test, contains)
 {
     {
-        BF::bloom_filter bf;
-        std::string      temp("temp");
+        BF::bloom_filter           bf;
+        constexpr std::string_view temp("temp");
         ASSERT_FALSE(bf.contains(temp.data(), temp.size()));
         ASSERT_FALSE(bf.add(temp.data(), temp.size()));
         ASSERT_FALSE(bf.contains(temp.data(), temp.size()));

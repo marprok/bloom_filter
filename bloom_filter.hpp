@@ -17,7 +17,7 @@ public:
     void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out, const std::uint32_t seed = 0xbeefeebb) const
     {
         // do not do any work if it is not needed...
-        if (k == 0)
+        if (!k || !key)
             return;
 
         const std::uint8_t*  data    = (const std::uint8_t*)key;
@@ -106,7 +106,7 @@ public:
 
         if (k == 1)
             out.push_back(h1);
-        else if (k > 1)
+        else
         {
             out.push_back(h1);
             out.push_back(h2);
@@ -122,12 +122,12 @@ public:
     }
 
 private:
-    inline std::uint64_t ROTL64(std::uint64_t x, std::int8_t r) const
+    constexpr std::uint64_t ROTL64(std::uint64_t x, std::int8_t r) const
     {
         return (x << r) | (x >> (64 - r));
     }
 
-    inline std::uint64_t fmix64(std::uint64_t k) const
+    constexpr std::uint64_t fmix64(std::uint64_t k) const
     {
         k ^= k >> 33;
         k *= 0xff51afd7ed558ccdLLU;
@@ -138,7 +138,7 @@ private:
         return k;
     }
 
-    inline std::uint64_t getblock64(const std::uint64_t* p, std::uint64_t i) const
+    constexpr std::uint64_t getblock64(const std::uint64_t* p, std::uint64_t i) const
     {
         return p[i];
     }
