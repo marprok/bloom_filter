@@ -57,36 +57,50 @@ public:
         {
         case 15:
             k2 ^= ((std::uint64_t)tail[14]) << 48;
+            [[fallthrough]];
         case 14:
             k2 ^= ((std::uint64_t)tail[13]) << 40;
+            [[fallthrough]];
         case 13:
             k2 ^= ((std::uint64_t)tail[12]) << 32;
+            [[fallthrough]];
         case 12:
             k2 ^= ((std::uint64_t)tail[11]) << 24;
+            [[fallthrough]];
         case 11:
             k2 ^= ((std::uint64_t)tail[10]) << 16;
+            [[fallthrough]];
         case 10:
             k2 ^= ((std::uint64_t)tail[9]) << 8;
+            [[fallthrough]];
         case 9:
             k2 ^= ((std::uint64_t)tail[8]) << 0;
             k2 *= c2;
             k2 = ROTL64(k2, 33);
             k2 *= c1;
             h2 ^= k2;
+            [[fallthrough]];
         case 8:
             k1 ^= ((std::uint64_t)tail[7]) << 56;
+            [[fallthrough]];
         case 7:
             k1 ^= ((std::uint64_t)tail[6]) << 48;
+            [[fallthrough]];
         case 6:
             k1 ^= ((std::uint64_t)tail[5]) << 40;
+            [[fallthrough]];
         case 5:
             k1 ^= ((std::uint64_t)tail[4]) << 32;
+            [[fallthrough]];
         case 4:
             k1 ^= ((std::uint64_t)tail[3]) << 24;
+            [[fallthrough]];
         case 3:
             k1 ^= ((std::uint64_t)tail[2]) << 16;
+            [[fallthrough]];
         case 2:
             k1 ^= ((std::uint64_t)tail[1]) << 8;
+            [[fallthrough]];
         case 1:
             k1 ^= ((std::uint64_t)tail[0]) << 0;
             k1 *= c1;
@@ -167,11 +181,9 @@ public:
         , p(other.p)
     {
         if (!other.bits.empty())
-        {
-            bits = other.bits;
-            other.bits.clear();
-        }
-        other.m = other.k = other.n = other.p = 0;
+            bits = std::move(other.bits);
+
+        other.clear();
     }
 
     bloom_filter& operator=(bloom_filter&& other)
@@ -184,11 +196,9 @@ public:
             p = other.p;
 
             if (!other.bits.empty())
-            {
-                bits = other.bits;
-                other.bits.clear();
-            }
-            other.m = other.k = other.n = other.p = 0;
+                bits = std::move(other.bits);
+
+            other.clear();
         }
         return *this;
     }
@@ -328,6 +338,12 @@ public:
             bits[i] |= other.bits[i];
 
         return true;
+    }
+
+    void clear()
+    {
+        m = k = n = p = 0;
+        bits.clear();
     }
 
     constexpr bool operator==(const bloom_filter& other) const

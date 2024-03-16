@@ -58,6 +58,14 @@ TEST(bf_test, ownership)
 
         BF::bloom_filter bf3 = bf;
         EXPECT_EQ(bf3, bf);
+
+        bf.clear();
+        EXPECT_EQ(bf.bit_count(), 0);
+        EXPECT_EQ(bf.hash_count(), 0);
+        EXPECT_EQ(bf.expected_elements(), 0);
+        EXPECT_EQ(bf.size(), 0);
+        EXPECT_EQ(bf.false_positive(), 0.0);
+        EXPECT_EQ(bf.raw(), nullptr);
     }
 }
 
