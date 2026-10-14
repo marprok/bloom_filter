@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <gtest/gtest.h>
+#include <string>
 
 namespace BF
 {
@@ -12,10 +13,26 @@ inline bool is_close_enough(double a, double b, double abs_epsilon)
     return delta <= abs_epsilon;
 }
 
+class UTHasher
+{
+public:
+    void operator()(const void* key, const std::uint64_t len, const std::uint64_t k, BF::hashes& hash_values) const
+    {
+        hash_values.clear();
+        const auto h = std::hash<std::string> {}(std::string(reinterpret_cast<const char*>(key), len - 1));
+        hash_values.emplace_back((h & 0xFFFFFFFF00000000) >> 32);
+        hash_values.emplace_back(h & 0xFFFFFFFF);
+        for (std::uint64_t i = 3; i <= k; ++i)
+        {
+            hash_values.emplace_back(hash_values[0] + i * hash_values[1]);
+        }
+    }
+};
+
 TEST(bf_test, ownership)
 {
     {
-        BF::bloom_filter bf;
+        BF::bloom_filter<UTHasher> bf;
         EXPECT_TRUE(bf.config(1024, 2, 3));
         EXPECT_EQ(bf.bit_count(), 1024);
         EXPECT_EQ(bf.hash_count(), 2);
@@ -24,7 +41,7 @@ TEST(bf_test, ownership)
         EXPECT_EQ(bf.size(), 128);
         EXPECT_NE(bf.raw(), nullptr);
 
-        BF::bloom_filter bf2 = std::move(bf);
+        BF::bloom_filter<UTHasher> bf2 = std::move(bf);
         EXPECT_EQ(bf.bit_count(), 0);
         EXPECT_EQ(bf.hash_count(), 0);
         EXPECT_EQ(bf.expected_elements(), 0);
@@ -54,7 +71,7 @@ TEST(bf_test, ownership)
         EXPECT_EQ(bf2.false_positive(), 1.0);
         EXPECT_EQ(bf2.raw(), nullptr);
 
-        BF::bloom_filter bf3 = bf;
+        BF::bloom_filter<UTHasher> bf3 = bf;
         EXPECT_EQ(bf3, bf);
 
         bf.clear();
@@ -70,7 +87,7 @@ TEST(bf_test, ownership)
 TEST(bf_test, parameters)
 {
     {
-        BF::bloom_filter bf;
+        BF::bloom_filter<UTHasher> bf;
         EXPECT_TRUE(bf.config(1024, 10, 1024 * 2));
         EXPECT_EQ(bf.bit_count(), 1024);
         EXPECT_EQ(bf.hash_count(), 10);
@@ -81,7 +98,7 @@ TEST(bf_test, parameters)
     }
 
     {
-        BF::bloom_filter bf;
+        BF::bloom_filter<UTHasher> bf;
         EXPECT_TRUE(bf.config(553, 0.002));
         EXPECT_EQ(bf.bit_count(), 7153);
         EXPECT_EQ(bf.hash_count(), 9);
@@ -92,7 +109,7 @@ TEST(bf_test, parameters)
     }
 
     {
-        BF::bloom_filter bf;
+        BF::bloom_filter<UTHasher> bf;
         EXPECT_FALSE(bf.config(0, 0.5));
         EXPECT_FALSE(bf.config(0, 1.0));
         EXPECT_FALSE(bf.config(0, 1.5));
@@ -122,7 +139,7 @@ TEST(bf_test, from_existing_data)
         raw_bytes[i] = std::rand() % 256;
 
     {
-        BF::bloom_filter bf;
+        BF::bloom_filter<UTHasher> bf;
         EXPECT_TRUE(bf.from(m, k, n, raw_bytes, byte_count));
         EXPECT_EQ(bf.bit_count(), m);
         EXPECT_EQ(bf.hash_count(), k);
@@ -135,12 +152,12 @@ TEST(bf_test, from_existing_data)
     }
 
     {
-        constexpr std::uint64_t old_byte_count = 278557;
-        constexpr std::uint64_t old_n          = 58123;
-        constexpr std::uint64_t old_m          = 2228450;
-        constexpr std::uint64_t old_k          = 27;
-        constexpr double        old_p          = 0.00000001;
-        BF::bloom_filter        bf;
+        constexpr std::uint64_t    old_byte_count = 278557;
+        constexpr std::uint64_t    old_n          = 58123;
+        constexpr std::uint64_t    old_m          = 2228450;
+        constexpr std::uint64_t    old_k          = 27;
+        constexpr double           old_p          = 0.00000001;
+        BF::bloom_filter<UTHasher> bf;
         EXPECT_TRUE(bf.config(old_n, old_p));
         EXPECT_EQ(bf.bit_count(), old_m);
         EXPECT_EQ(bf.hash_count(), old_k);
@@ -161,49 +178,6 @@ TEST(bf_test, from_existing_data)
     }
 }
 
-TEST(bf_test, hasher_sanity_check)
-{
-    BF::murmur3 hasher;
-    {
-        constexpr std::string_view input_text("");
-        constexpr std::uint64_t    k = 39;
-        BF::hashes                 out;
-        out.reserve(k);
-        hasher(input_text.data(), input_text.size(), k, out);
-        EXPECT_EQ(out.size(), k);
-    }
-
-    {
-        constexpr std::string_view input_text("This is text");
-        constexpr std::uint64_t    k = 1;
-        BF::hashes                 out, out2;
-        out.reserve(k);
-        out2.reserve(k);
-        hasher(input_text.data(), input_text.size(), k, out);
-        hasher(input_text.data(), input_text.size(), k, out2, 0x12345678);
-        EXPECT_EQ(out.size(), k);
-        EXPECT_EQ(out2.size(), k);
-        EXPECT_NE(out[0], out2[0]);
-    }
-
-    for (std::uint64_t k = 0; k < 443; ++k)
-    {
-        constexpr std::string_view input_text("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla non ex dictum, euismod sem a, ultrices nulla.");
-        BF::hashes                 out;
-        if (k > 1)
-            out.reserve(k);
-
-        hasher(input_text.data(), input_text.size(), k, out);
-        EXPECT_EQ(out.size(), k);
-        if (k > 1)
-        {
-            std::set<std::uint64_t> unique(out.begin(), out.end());
-            EXPECT_EQ(out.size(), k);
-            EXPECT_EQ(out.size(), unique.size());
-        }
-    }
-}
-
 TEST(bf_test, add)
 {
 
@@ -213,7 +187,7 @@ TEST(bf_test, add)
     class mock_hash
     {
     public:
-        void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out)
+        void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out) const
         {
             static std::uint64_t bit_index = BIT_COUNT; // bloom_filter should wrap the bit index
             static_cast<void>(key);
@@ -239,7 +213,7 @@ TEST(bf_test, add)
 TEST(bf_test, contains)
 {
     {
-        BF::bloom_filter           bf;
+        BF::bloom_filter<UTHasher> bf;
         constexpr std::string_view temp("temp");
         ASSERT_FALSE(bf.contains(temp.data(), temp.size()));
         ASSERT_FALSE(bf.add(temp.data(), temp.size()));
@@ -247,9 +221,9 @@ TEST(bf_test, contains)
     }
 
     {
-        BF::bloom_filter        bf;
-        constexpr std::uint64_t ELEMENT_COUNT = 10000000;
-        constexpr double        FPR           = 0.23;
+        BF::bloom_filter<UTHasher> bf;
+        constexpr std::uint64_t    ELEMENT_COUNT = 10000000;
+        constexpr double           FPR           = 0.23;
         ASSERT_TRUE(bf.config(ELEMENT_COUNT, FPR));
 
         for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
@@ -268,9 +242,9 @@ TEST(bf_test, contains)
     }
 
     {
-        BF::bloom_filter        bf;
-        constexpr std::uint64_t ELEMENT_COUNT = 234;
-        constexpr double        FPR           = 0.1;
+        BF::bloom_filter<UTHasher> bf;
+        constexpr std::uint64_t    ELEMENT_COUNT = 234;
+        constexpr double           FPR           = 0.1;
         ASSERT_TRUE(bf.config(ELEMENT_COUNT, FPR));
 
         for (std::uint64_t i = 0; i < ELEMENT_COUNT; ++i)
@@ -301,7 +275,7 @@ TEST(bf_test, merge)
     for (std::uint64_t i = 0; i < byte_count; ++i)
         raw_bytes[i] = 0xAA;
 
-    BF::bloom_filter bf;
+    BF::bloom_filter<UTHasher> bf;
     EXPECT_TRUE(bf.from(m, k, n, raw_bytes, byte_count));
     EXPECT_EQ(bf.bit_count(), m);
     EXPECT_EQ(bf.hash_count(), k);
@@ -315,7 +289,7 @@ TEST(bf_test, merge)
     for (std::uint64_t i = 0; i < byte_count; ++i)
         raw_bytes[i] = 0x55;
 
-    BF::bloom_filter other;
+    BF::bloom_filter<UTHasher> other;
     EXPECT_TRUE(other.from(m, k, n, raw_bytes, byte_count));
     EXPECT_EQ(other.bit_count(), m);
     EXPECT_EQ(other.hash_count(), k);
@@ -336,8 +310,8 @@ TEST(bf_test, merge)
 
 TEST(bf_test, equality)
 {
-    BF::bloom_filter first;
-    BF::bloom_filter second;
+    BF::bloom_filter<UTHasher> first;
+    BF::bloom_filter<UTHasher> second;
     EXPECT_EQ(first, second);
 
     constexpr std::uint64_t n = 512;
@@ -366,7 +340,7 @@ TEST(bf_test, equality)
     second.add(v3.data(), v3.size());
     EXPECT_EQ(first, second);
 
-    BF::bloom_filter third;
+    BF::bloom_filter<UTHasher> third;
     EXPECT_TRUE(third.config(m - 1, k - 1, n - 1));
     third.add(v1.data(), v1.size());
     third.add(v2.data(), v2.size());
@@ -378,11 +352,11 @@ TEST(bf_test, equality)
     EXPECT_EQ(second, third);
     EXPECT_NE(first, third);
 
-    BF::bloom_filter fourth(std::move(second)); // second is no longer valid
+    BF::bloom_filter<UTHasher> fourth(std::move(second)); // second is no longer valid
     EXPECT_EQ(third, fourth);
     EXPECT_NE(second, third);
 
-    BF::bloom_filter fifth = fourth;
+    BF::bloom_filter<UTHasher> fifth = fourth;
     EXPECT_EQ(fifth, fourth);
     EXPECT_EQ(fifth, third);
 }
