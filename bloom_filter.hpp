@@ -166,7 +166,6 @@ public:
         : m(0)
         , k(0)
         , n(0)
-        , p(0.0)
     {
     }
 
@@ -178,7 +177,6 @@ public:
         : m(other.m)
         , k(other.k)
         , n(other.n)
-        , p(other.p)
     {
         if (!other.bits.empty())
             bits = std::move(other.bits);
@@ -193,7 +191,6 @@ public:
             m = other.m;
             k = other.k;
             n = other.n;
-            p = other.p;
 
             if (!other.bits.empty())
                 bits = std::move(other.bits);
@@ -211,7 +208,6 @@ public:
         this->m = m;
         this->k = k;
         this->n = n;
-        this->p = compute_p(m, k, n);
 
         const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
         bits.clear();
@@ -226,7 +222,6 @@ public:
             return false;
 
         this->n = n;
-        this->p = p;
         m       = compute_m(n, p);
         k       = compute_k(m, n);
 
@@ -242,10 +237,10 @@ public:
     bool from(std::uint64_t       m,
               std::uint64_t       k,
               std::uint64_t       n,
-              double              p,
               const std::uint8_t* raw,
               std::uint64_t       raw_size)
     {
+        const double p = compute_p(m, k, n);
         if (p >= 1.0 || p <= 0.0 || n == 0)
             return false;
 
@@ -254,7 +249,6 @@ public:
             return false;
 
         this->n = n;
-        this->p = p;
         this->m = m;
         this->k = k;
 
@@ -271,7 +265,7 @@ public:
 
     std::uint64_t expected_elements() const { return n; }
 
-    double false_positive() const { return p; }
+    double false_positive() const { return compute_p(m, k, n); }
 
     std::size_t size() const { return bits.size(); } // in bytes
 
@@ -284,7 +278,7 @@ public:
 
     bool add(const void* key, const std::uint64_t len)
     {
-        if (m == 0 || k == 0 || n == 0 || p == 0.0)
+        if (m == 0 || k == 0 || n == 0)
             return false;
 
         hashes hash_values;
@@ -305,7 +299,7 @@ public:
 
     bool contains(const void* key, const std::uint64_t len) const
     {
-        if (m == 0 || k == 0 || n == 0 || p == 0.0)
+        if (m == 0 || k == 0 || n == 0)
             return false;
 
         hashes hash_values;
@@ -327,11 +321,11 @@ public:
 
     bool merge(const bloom_filter& other)
     {
-        if (m == 0 || k == 0 || n == 0 || p == 0.0)
+        if (m == 0 || k == 0 || n == 0)
             return false;
 
         if (m != other.m || k != other.k || n != other.n
-            || p != other.p || bits.size() != other.bits.size())
+            || bits.size() != other.bits.size())
             return false;
 
         for (std::uint64_t i = 0; i < bits.size(); ++i)
@@ -342,14 +336,13 @@ public:
 
     void clear()
     {
-        m = k = n = p = 0;
+        m = k = n = 0;
         bits.clear();
     }
 
     constexpr bool operator==(const bloom_filter& other) const
     {
-        if (m != other.m || k != other.k || n != other.n
-            || p != other.p)
+        if (m != other.m || k != other.k || n != other.n)
             return false;
 
         return bits == other.bits;
@@ -361,7 +354,6 @@ private:
     std::uint64_t             m; // size in bits
     std::uint64_t             k; // number of hashes
     std::uint64_t             n; // expected number of elements
-    double                    p; // false positive probability(> 0 && < 1)
     std::vector<std::uint8_t> bits;
     hasher                    h;
 

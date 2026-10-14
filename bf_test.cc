@@ -2,8 +2,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <gtest/gtest.h>
-#include <set>
-#include <string_view>
 
 namespace BF
 {
@@ -31,9 +29,9 @@ TEST(bf_test, ownership)
         EXPECT_EQ(bf.hash_count(), 0);
         EXPECT_EQ(bf.expected_elements(), 0);
         EXPECT_EQ(bf.size(), 0);
-        EXPECT_EQ(bf.false_positive(), 0.0);
         EXPECT_EQ(bf.raw(), nullptr);
 
+        EXPECT_EQ(bf.false_positive(), 1.0);
         EXPECT_EQ(bf2.bit_count(), 1024);
         EXPECT_EQ(bf2.hash_count(), 2);
         EXPECT_EQ(bf2.expected_elements(), 3);
@@ -53,7 +51,7 @@ TEST(bf_test, ownership)
         EXPECT_EQ(bf2.hash_count(), 0);
         EXPECT_EQ(bf2.expected_elements(), 0);
         EXPECT_EQ(bf2.size(), 0);
-        EXPECT_EQ(bf2.false_positive(), 0.0);
+        EXPECT_EQ(bf2.false_positive(), 1.0);
         EXPECT_EQ(bf2.raw(), nullptr);
 
         BF::bloom_filter bf3 = bf;
@@ -64,7 +62,7 @@ TEST(bf_test, ownership)
         EXPECT_EQ(bf.hash_count(), 0);
         EXPECT_EQ(bf.expected_elements(), 0);
         EXPECT_EQ(bf.size(), 0);
-        EXPECT_EQ(bf.false_positive(), 0.0);
+        EXPECT_EQ(bf.false_positive(), 1.0);
         EXPECT_EQ(bf.raw(), nullptr);
     }
 }
@@ -125,7 +123,7 @@ TEST(bf_test, from_existing_data)
 
     {
         BF::bloom_filter bf;
-        EXPECT_TRUE(bf.from(m, k, n, p, raw_bytes, byte_count));
+        EXPECT_TRUE(bf.from(m, k, n, raw_bytes, byte_count));
         EXPECT_EQ(bf.bit_count(), m);
         EXPECT_EQ(bf.hash_count(), k);
         EXPECT_EQ(bf.expected_elements(), n);
@@ -151,7 +149,7 @@ TEST(bf_test, from_existing_data)
         EXPECT_EQ(bf.size(), old_byte_count);
         EXPECT_NE(bf.raw(), nullptr);
         // Override existing content
-        EXPECT_TRUE(bf.from(m, k, n, p, raw_bytes, byte_count));
+        EXPECT_TRUE(bf.from(m, k, n, raw_bytes, byte_count));
         EXPECT_EQ(bf.bit_count(), m);
         EXPECT_EQ(bf.hash_count(), k);
         EXPECT_EQ(bf.expected_elements(), n);
@@ -298,17 +296,17 @@ TEST(bf_test, merge)
     constexpr std::uint64_t n = 1023;
     constexpr std::uint64_t m = byte_count * 8;
     constexpr std::uint64_t k = 2;
-    constexpr double        p = 0.003322;
+    constexpr double        p = 0.035038556;
 
     for (std::uint64_t i = 0; i < byte_count; ++i)
         raw_bytes[i] = 0xAA;
 
     BF::bloom_filter bf;
-    EXPECT_TRUE(bf.from(m, k, n, p, raw_bytes, byte_count));
+    EXPECT_TRUE(bf.from(m, k, n, raw_bytes, byte_count));
     EXPECT_EQ(bf.bit_count(), m);
     EXPECT_EQ(bf.hash_count(), k);
     EXPECT_EQ(bf.expected_elements(), n);
-    EXPECT_TRUE(is_close_enough(bf.false_positive(), p, 0.0000009));
+    EXPECT_TRUE(is_close_enough(bf.false_positive(), p, 0.0000000009));
     EXPECT_EQ(bf.size(), byte_count);
     EXPECT_NE(bf.raw(), nullptr);
     EXPECT_NE(bf.raw(), raw_bytes);
@@ -318,11 +316,11 @@ TEST(bf_test, merge)
         raw_bytes[i] = 0x55;
 
     BF::bloom_filter other;
-    EXPECT_TRUE(other.from(m, k, n, p, raw_bytes, byte_count));
+    EXPECT_TRUE(other.from(m, k, n, raw_bytes, byte_count));
     EXPECT_EQ(other.bit_count(), m);
     EXPECT_EQ(other.hash_count(), k);
     EXPECT_EQ(other.expected_elements(), n);
-    EXPECT_TRUE(is_close_enough(other.false_positive(), p, 0.0000009));
+    EXPECT_TRUE(is_close_enough(other.false_positive(), p, 0.0000000009));
     EXPECT_EQ(other.size(), byte_count);
     EXPECT_NE(other.raw(), nullptr);
     EXPECT_NE(other.raw(), raw_bytes);
