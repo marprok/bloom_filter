@@ -1,9 +1,9 @@
 #ifndef BLOOM_FILTER_HPP
 #define BLOOM_FILTER_HPP
 
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 
 namespace BF
@@ -61,7 +61,7 @@ public:
         this->k = k;
         this->n = n;
 
-        const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        const std::uint64_t byte_count = (m >> 3) + static_cast<bool>(m & 7);
         bits.clear();
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
 
@@ -77,7 +77,7 @@ public:
         m       = compute_m(n, p);
         k       = compute_k(m, n);
 
-        const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        const std::uint64_t byte_count = (m >> 3) + static_cast<bool>(m & 7);
         bits.clear();
         bits.resize(byte_count > 0 ? byte_count : 1, 0);
 
@@ -96,7 +96,7 @@ public:
         if (p >= 1.0 || p <= 0.0 || n == 0)
             return false;
 
-        const std::uint64_t byte_count = m / 8 + static_cast<bool>(m & 7);
+        const std::uint64_t byte_count = (m >> 3) + static_cast<bool>(m & 7);
         if (!raw || raw_size == 0 || byte_count != raw_size)
             return false;
 
@@ -105,8 +105,8 @@ public:
         this->k = k;
 
         bits.clear();
-        bits.reserve(raw_size);
-        std::copy(raw, raw + raw_size, std::back_inserter(bits));
+        bits.resize(raw_size);
+        std::memcpy(bits.data(), raw, raw_size);
 
         return true;
     }
@@ -133,15 +133,16 @@ public:
         if (m == 0 || k == 0 || n == 0)
             return false;
 
+        // TODO: compute the hashes in place
         const std::uint64_t seed        = h(key, len);
-        hashes              hash_values = k_hash(seed);
+        const hashes        hash_values = k_hash(seed);
         if (k != hash_values.size())
             return false;
 
         for (std::uint64_t i = 0; i < k; ++i)
         {
             const std::uint64_t abs_bit_id = hash_values[i] % m;
-            const std::uint64_t byte_id    = abs_bit_id / 8;
+            const std::uint64_t byte_id    = abs_bit_id >> 3;
             bits[byte_id] |= BIT_POS[abs_bit_id & 7];
         }
         return true;
@@ -151,16 +152,16 @@ public:
     {
         if (m == 0 || k == 0 || n == 0)
             return false;
-
+        // TODO: compute the hashes in place
         const std::uint64_t seed        = h(key, len);
-        hashes              hash_values = k_hash(seed);
+        const hashes        hash_values = k_hash(seed);
         if (k != hash_values.size())
             return false;
 
         for (std::uint64_t i = 0; i < k; ++i)
         {
             const std::uint64_t abs_bit_id = hash_values[i] % m;
-            const std::uint64_t byte_id    = abs_bit_id / 8;
+            const std::uint64_t byte_id    = abs_bit_id >> 3;
             if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
                 return false;
         }
@@ -203,21 +204,24 @@ private:
     std::uint64_t             k; // number of hashes
     std::uint64_t             n; // expected number of elements
     hasher                    h;
+    // TODO: maybe fetch 64 bits at a time?
     std::vector<std::uint8_t> bits;
 
     hashes k_hash(const std::uint64_t seed) const
     {
-        hashes values;
-        values.reserve(k);
+        if (k == 0)
+            return {};
+
+        hashes values(k);
         if (k == 1)
         {
-            values.emplace_back(seed);
+            values[0] = seed;
             return values;
         }
-        values.emplace_back((seed & 0xFFFFFFFF00000000) >> 32);
-        values.emplace_back(seed & 0xFFFFFFFF);
-        for (std::uint64_t i = 3; i <= k; ++i)
-            values.emplace_back(values[0] + i * values[1]);
+        values[0] = (seed & 0xFFFFFFFF00000000) >> 32;
+        values[1] = seed & 0xFFFFFFFF;
+        for (std::uint64_t i = 2; i < k; ++i)
+            values[i] = values[0] + i * values[1];
         return values;
     }
     inline std::uint64_t compute_m(std::uint64_t n, double p) const
