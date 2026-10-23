@@ -133,17 +133,23 @@ public:
         if (m == 0 || k == 0 || n == 0)
             return false;
 
-        // TODO: compute the hashes in place
-        const std::uint64_t seed        = h(key, len);
-        const hashes        hash_values = k_hash(seed);
-        if (k != hash_values.size())
-            return false;
-
-        for (std::uint64_t i = 0; i < k; ++i)
+        const std::uint64_t seed = h(key, len);
+        if (k == 1)
         {
-            const std::uint64_t abs_bit_id = hash_values[i] % m;
+            const std::uint64_t abs_bit_id = seed % m;
             const std::uint64_t byte_id    = abs_bit_id >> 3;
             bits[byte_id] |= BIT_POS[abs_bit_id & 7];
+        }
+        else
+        {
+            const std::uint64_t h0 = (seed & 0xFFFFFFFF00000000) >> 32;
+            const std::uint64_t h1 = seed & 0xFFFFFFFF;
+            for (std::uint64_t i = 0; i < k; ++i)
+            {
+                const std::uint64_t abs_bit_id = (h0 * (i != 1) + i * h1) % m;
+                const std::uint64_t byte_id    = abs_bit_id >> 3;
+                bits[byte_id] |= BIT_POS[abs_bit_id & 7];
+            }
         }
         return true;
     }
@@ -152,18 +158,26 @@ public:
     {
         if (m == 0 || k == 0 || n == 0)
             return false;
-        // TODO: compute the hashes in place
-        const std::uint64_t seed        = h(key, len);
-        const hashes        hash_values = k_hash(seed);
-        if (k != hash_values.size())
-            return false;
 
-        for (std::uint64_t i = 0; i < k; ++i)
+        const std::uint64_t seed = h(key, len);
+        if (k == 1)
         {
-            const std::uint64_t abs_bit_id = hash_values[i] % m;
+            const std::uint64_t abs_bit_id = seed % m;
             const std::uint64_t byte_id    = abs_bit_id >> 3;
             if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
                 return false;
+        }
+        else
+        {
+            const std::uint64_t h0 = (seed & 0xFFFFFFFF00000000) >> 32;
+            const std::uint64_t h1 = seed & 0xFFFFFFFF;
+            for (std::uint64_t i = 0; i < k; ++i)
+            {
+                const std::uint64_t abs_bit_id = (h0 * (i != 1) + i * h1) % m;
+                const std::uint64_t byte_id    = abs_bit_id >> 3;
+                if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
+                    return false;
+            }
         }
         return true;
     }
@@ -207,23 +221,6 @@ private:
     // TODO: maybe fetch 64 bits at a time?
     std::vector<std::uint8_t> bits;
 
-    hashes k_hash(const std::uint64_t seed) const
-    {
-        if (k == 0)
-            return {};
-
-        hashes values(k);
-        if (k == 1)
-        {
-            values[0] = seed;
-            return values;
-        }
-        values[0] = (seed & 0xFFFFFFFF00000000) >> 32;
-        values[1] = seed & 0xFFFFFFFF;
-        for (std::uint64_t i = 2; i < k; ++i)
-            values[i] = values[0] + i * values[1];
-        return values;
-    }
     inline std::uint64_t compute_m(std::uint64_t n, double p) const
     {
         return std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
