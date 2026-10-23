@@ -16,16 +16,9 @@ inline bool is_close_enough(double a, double b, double abs_epsilon)
 class UTHasher
 {
 public:
-    void operator()(const void* key, const std::uint64_t len, const std::uint64_t k, BF::hashes& hash_values) const
+    inline std::uint64_t operator()(const void* key, const std::uint64_t len) const
     {
-        hash_values.clear();
-        const auto h = std::hash<std::string> {}(std::string(reinterpret_cast<const char*>(key), len - 1));
-        hash_values.emplace_back((h & 0xFFFFFFFF00000000) >> 32);
-        hash_values.emplace_back(h & 0xFFFFFFFF);
-        for (std::uint64_t i = 3; i <= k; ++i)
-        {
-            hash_values.emplace_back(hash_values[0] + i * hash_values[1]);
-        }
+        return std::hash<std::string> {}(std::string(reinterpret_cast<const char*>(key), len - 1));
     }
 };
 
@@ -187,14 +180,13 @@ TEST(bf_test, add)
     class mock_hash
     {
     public:
-        void operator()(const void* key, const std::uint64_t len, std::uint64_t k, hashes& out) const
+        inline std::uint64_t operator()(const void* key, const std::uint64_t len) const
         {
-            static std::uint64_t bit_index = BIT_COUNT; // bloom_filter should wrap the bit index
+            static std::uint64_t bit_index = 0xFFFFFFFF00000000 & BIT_COUNT; // bloom_filter should wrap the bit index
             static_cast<void>(key);
             static_cast<void>(len);
-            static_cast<void>(k);
-            for (std::uint64_t i = 0; i < k; ++i)
-                out.push_back(bit_index++);
+
+            return bit_index++;
         }
     };
 

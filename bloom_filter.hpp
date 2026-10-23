@@ -133,10 +133,8 @@ public:
         if (m == 0 || k == 0 || n == 0)
             return false;
 
-        hashes hash_values;
-        hash_values.reserve(k);
-        h(key, len, k, hash_values);
-
+        const std::uint64_t seed        = h(key, len);
+        hashes              hash_values = k_hash(seed);
         if (k != hash_values.size())
             return false;
 
@@ -154,10 +152,8 @@ public:
         if (m == 0 || k == 0 || n == 0)
             return false;
 
-        hashes hash_values;
-        hash_values.reserve(k);
-        h(key, len, k, hash_values);
-
+        const std::uint64_t seed        = h(key, len);
+        hashes              hash_values = k_hash(seed);
         if (k != hash_values.size())
             return false;
 
@@ -206,9 +202,24 @@ private:
     std::uint64_t             m; // size in bits
     std::uint64_t             k; // number of hashes
     std::uint64_t             n; // expected number of elements
-    std::vector<std::uint8_t> bits;
     hasher                    h;
+    std::vector<std::uint8_t> bits;
 
+    hashes k_hash(const std::uint64_t seed) const
+    {
+        hashes values;
+        values.reserve(k);
+        if (k == 1)
+        {
+            values.emplace_back(seed);
+            return values;
+        }
+        values.emplace_back((seed & 0xFFFFFFFF00000000) >> 32);
+        values.emplace_back(seed & 0xFFFFFFFF);
+        for (std::uint64_t i = 3; i <= k; ++i)
+            values.emplace_back(values[0] + i * values[1]);
+        return values;
+    }
     inline std::uint64_t compute_m(std::uint64_t n, double p) const
     {
         return std::ceil((n * std::log(p)) / std::log(1.0 / std::pow(2.0, std::log(2.0))));
