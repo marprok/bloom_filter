@@ -4,9 +4,9 @@ A Bloom filter implementation.
 This is a simple and easy to use implementation of a basic [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter).
 
 # Hash Function
-The hash function that is used by `bloom_filter` is a template parameter to allow for better customization. 
+The hash function that is used by `bloom_filter` is a template parameter to allow for better customization.
 
-By default, the hash function is `murmur3` which is in the public domain and can be found [here](https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp).
+The user has to provide a hash functor as a template argument.
 
 [Kirsch-Mitzenmacher-Optimization](https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf) is used to approximate `k` hash functions.
 
