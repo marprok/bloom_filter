@@ -6,7 +6,7 @@
 #include <cstring>
 #include <vector>
 
-namespace BF
+namespace bf
 {
 typedef std::vector<std::uint64_t> hashes;
 
@@ -14,7 +14,7 @@ template <typename hasher>
 class bloom_filter
 {
 public:
-    bloom_filter()
+    bloom_filter() noexcept
         : m(0)
         , k(0)
         , n(0)
@@ -25,7 +25,7 @@ public:
 
     bloom_filter& operator=(const bloom_filter& other) = default;
 
-    bloom_filter(bloom_filter&& other)
+    bloom_filter(bloom_filter&& other) noexcept
         : m(other.m)
         , k(other.k)
         , n(other.n)
@@ -111,15 +111,15 @@ public:
         return true;
     }
 
-    std::uint64_t bit_count() const { return m; }
+    inline std::uint64_t bit_count() const { return m; }
 
-    std::uint64_t hash_count() const { return k; }
+    inline std::uint64_t hash_count() const { return k; }
 
-    std::uint64_t expected_elements() const { return n; }
+    inline std::uint64_t expected_elements() const { return n; }
 
-    double false_positive() const { return compute_p(m, k, n); }
+    inline double false_positive() const { return compute_p(m, k, n); }
 
-    std::size_t size() const { return bits.size(); } // in bytes
+    inline std::size_t size() const { return bits.size(); } // in bytes
 
     const std::uint8_t* raw() const
     {
@@ -134,13 +134,13 @@ public:
             return false;
 
         const std::uint64_t seed = h(key, len);
-        if (k == 1)
+        if (k == 1) [[unlikely]]
         {
             const std::uint64_t abs_bit_id = seed % m;
             const std::uint64_t byte_id    = abs_bit_id >> 3;
-            bits[byte_id] |= BIT_POS[abs_bit_id & 7];
+            bits[byte_id] |= (1U << (abs_bit_id & 7));
         }
-        else
+        else [[likely]]
         {
             const std::uint64_t h0 = (seed & 0xFFFFFFFF00000000) >> 32;
             const std::uint64_t h1 = seed & 0xFFFFFFFF;
@@ -148,7 +148,7 @@ public:
             {
                 const std::uint64_t abs_bit_id = (h0 * (i != 1) + i * h1) % m;
                 const std::uint64_t byte_id    = abs_bit_id >> 3;
-                bits[byte_id] |= BIT_POS[abs_bit_id & 7];
+                bits[byte_id] |= (1U << (abs_bit_id & 7));
             }
         }
         return true;
@@ -160,14 +160,14 @@ public:
             return false;
 
         const std::uint64_t seed = h(key, len);
-        if (k == 1)
+        if (k == 1) [[unlikely]]
         {
             const std::uint64_t abs_bit_id = seed % m;
             const std::uint64_t byte_id    = abs_bit_id >> 3;
-            if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
+            if (!(bits[byte_id] & (1U << (abs_bit_id & 7))))
                 return false;
         }
-        else
+        else [[likely]]
         {
             const std::uint64_t h0 = (seed & 0xFFFFFFFF00000000) >> 32;
             const std::uint64_t h1 = seed & 0xFFFFFFFF;
@@ -175,7 +175,7 @@ public:
             {
                 const std::uint64_t abs_bit_id = (h0 * (i != 1) + i * h1) % m;
                 const std::uint64_t byte_id    = abs_bit_id >> 3;
-                if (!(bits[byte_id] & BIT_POS[abs_bit_id & 7]))
+                if (!(bits[byte_id] & (1U << (abs_bit_id & 7))))
                     return false;
             }
         }
@@ -197,13 +197,13 @@ public:
         return true;
     }
 
-    void clear()
+    inline void clear()
     {
         m = k = n = 0;
         bits.clear();
     }
 
-    constexpr bool operator==(const bloom_filter& other) const
+    bool operator==(const bloom_filter& other) const
     {
         if (m != other.m || k != other.k || n != other.n)
             return false;
@@ -212,12 +212,10 @@ public:
     }
 
 private:
-    static constexpr std::uint8_t BIT_POS[8] = { 0x1u, 0x2u, 0x4u, 0x8u, 0x10u, 0x20u, 0x40u, 0x80u };
-
-    std::uint64_t             m; // size in bits
-    std::uint64_t             k; // number of hashes
-    std::uint64_t             n; // expected number of elements
-    hasher                    h;
+    std::uint64_t m; // size in bits
+    std::uint64_t k; // number of hashes
+    std::uint64_t n; // expected number of elements
+    hasher        h;
     // TODO: maybe fetch 64 bits at a time?
     std::vector<std::uint8_t> bits;
 
@@ -237,5 +235,5 @@ private:
     }
 };
 
-} // BF
+} // bf
 #endif // BLOOM_FILTER_HPP
